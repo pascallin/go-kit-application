@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package pb;
+
+service Str {
+  rpc Uppercase (UppercaseRequest) returns (UppercaseReply) {}
+}
+
+message UppercaseRequest {
+  string s = 1;
+}
+
+message UppercaseReply {
+  string v = 1;
+  string err = 2;
+}
