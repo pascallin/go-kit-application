@@ -4,13 +4,11 @@ import (
 	consulsd "github.com/go-kit/kit/sd/consul"
 	"github.com/hashicorp/consul/api"
 	"os"
-
-	"github.com/pascallin/go-micro-services/config"
 )
 
 func getClient () consulsd.Client {
 
-	config := Config.ReadConfig()
+	config := ReadConfig()
 	logger := getLogger()
 
 	var client consulsd.Client

@@ -22,8 +22,8 @@ import (
 	"github.com/go-kit/kit/sd"
 	"github.com/go-kit/kit/sd/lb"
 
-	"github.com/pascallin/go-micro-services/pkg/strsvc"
-	"github.com/pascallin/go-micro-services/pkg/strsvc/strtransport"
+	"github.com/pascallin/go-micro-services/internal/strsvc"
+	"github.com/pascallin/go-micro-services/internal/strsvc/strtransport"
 )
 
 func main() {
@@ -72,11 +72,11 @@ func main() {
 		var (
 			tags        = []string{}
 			passingOnly = true
-			endpoints   = strsvc.Set{}
+			endpoints   = stringsvc.Set{}
 			instancer   = consulsd.NewInstancer(client, logger, "strsvc", tags, passingOnly)
 		)
 		{
-			factory := stringsvcFactory(strsvc.MakeUppercaseEndpoint, tracer, zipkinTracer, logger)
+			factory := stringsvcFactory(stringsvc.MakeUppercaseEndpoint, tracer, zipkinTracer, logger)
 			endpointer := sd.NewEndpointer(instancer, factory, logger)
 			balancer := lb.NewRoundRobin(endpointer)
 			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
@@ -103,7 +103,7 @@ func main() {
 	logger.Log("exit", <-errc)
 }
 
-func stringsvcFactory(makeEndpoint func(service strsvc.StringService) endpoint.Endpoint, tracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, logger log.Logger) sd.Factory {
+func stringsvcFactory(makeEndpoint func(service stringsvc.StringService) endpoint.Endpoint, tracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, logger log.Logger) sd.Factory {
 	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
 		conn, err := grpc.Dial(instance, grpc.WithInsecure())
 		if err != nil {

@@ -1,42 +1,44 @@
-package strsvc
+package stringsvc
 
 import (
-	"context"
 	"errors"
 	"strings"
 
-	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics"
 )
 
 // StringService provides operations on strings.
 type StringService interface {
-	Uppercase(context.Context, string) (string, error)
-	// Count(context.Context, strsvc) int
+	Uppercase(string) (string, error)
+	Count(string) int
 }
 
 // stringService is a concrete implementation of StringService
 type stringService struct{}
 
-func (stringService) Uppercase(_ context.Context, s string) (string, error) {
+func (stringService) Uppercase(s string) (string, error) {
 	if s == "" {
 		return "", errors.New("empty strsvc")
 	}
 	return strings.ToUpper(s), nil
 }
 
-func (stringService) Count(_ context.Context, s string) int {
+func (stringService) Count(s string) int {
 	return len(s)
 }
 
+// ErrEmpty is returned when input string is empty
+var ErrEmpty = errors.New("Empty string")
+
 // NewStringService returns a naïve, stateless implementation of Service.
-func NewStringService() StringService {
+func NewStringService() stringService {
 	return stringService{}
 }
 
 // // New returns a basic Service with all of the expected middlewares wired in.
-func NewService(logger log.Logger, ints, chars metrics.Counter) StringService {
-	var svc StringService
+func NewService(logger log.Logger, ints, chars metrics.Counter) stringService {
+	var svc stringService
 	{
 		svc = NewStringService()
 		// svc = LoggingMiddleware(logger)(svc)
@@ -44,3 +46,6 @@ func NewService(logger log.Logger, ints, chars metrics.Counter) StringService {
 	}
 	return svc
 }
+
+// ServiceMiddleware is a chainable behavior modifier for StringService.
+type ServiceMiddleware func(StringService) StringService
