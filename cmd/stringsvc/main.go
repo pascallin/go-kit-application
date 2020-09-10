@@ -1,6 +1,6 @@
 package main
 
-import "github.com/pascallin/go-micro-services/internal/stringsvc"
+import "github.com/pascallin/go-micro-services/stringsvc"
 
 func main() {
 	stringsvc.StartStringSVCService()
