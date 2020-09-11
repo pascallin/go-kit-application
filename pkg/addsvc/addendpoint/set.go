@@ -2,6 +2,12 @@ package addendpoint
 
 import (
 	"context"
+	"github.com/go-kit/kit/circuitbreaker"
+	"github.com/go-kit/kit/tracing/opentracing"
+	"github.com/go-kit/kit/tracing/zipkin"
+	stdopentracing "github.com/opentracing/opentracing-go"
+	stdzipkin "github.com/openzipkin/zipkin-go"
+	"github.com/sony/gobreaker"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -24,30 +30,30 @@ type Set struct {
 
 // New returns a Set that wraps the provided server, and wires in all of the
 // expected endpoint middlewares via the various parameters.
-func New(svc addservice.AddService, logger log.Logger, duration metrics.Histogram) Set {
+func New(svc addservice.AddService, logger log.Logger, duration metrics.Histogram, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer) Set {
 	var sumEndpoint endpoint.Endpoint
 	{
 		sumEndpoint = MakeSumEndpoint(svc)
 		sumEndpoint = ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Every(time.Second), 1))(sumEndpoint)
-		//sumEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(sumEndpoint)
-		//sumEndpoint = opentracing.TraceServer(otTracer, "Sum")(sumEndpoint)
-		//if zipkinTracer != nil {
-		//	sumEndpoint = zipkin.TraceEndpoint(zipkinTracer, "Sum")(sumEndpoint)
-		//}
-		//sumEndpoint = LoggingMiddleware(log.With(logger, "method", "Sum"))(sumEndpoint)
-		//sumEndpoint = InstrumentingMiddleware(duration.With("method", "Sum"))(sumEndpoint)
+		sumEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(sumEndpoint)
+		sumEndpoint = opentracing.TraceServer(otTracer, "Sum")(sumEndpoint)
+		if zipkinTracer != nil {
+			sumEndpoint = zipkin.TraceEndpoint(zipkinTracer, "Sum")(sumEndpoint)
+		}
+		sumEndpoint = LoggingMiddleware(log.With(logger, "method", "Sum"))(sumEndpoint)
+		sumEndpoint = InstrumentingMiddleware(duration.With("method", "Sum"))(sumEndpoint)
 	}
 	var concatEndpoint endpoint.Endpoint
 	{
 		concatEndpoint = MakeConcatEndpoint(svc)
 		concatEndpoint = ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Every(time.Second), 100))(concatEndpoint)
-		//concatEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(concatEndpoint)
-		//concatEndpoint = opentracing.TraceServer(otTracer, "Concat")(concatEndpoint)
-		//if zipkinTracer != nil {
-		//	concatEndpoint = zipkin.TraceEndpoint(zipkinTracer, "Concat")(concatEndpoint)
-		//}
-		//concatEndpoint = LoggingMiddleware(log.With(logger, "method", "Concat"))(concatEndpoint)
-		//concatEndpoint = InstrumentingMiddleware(duration.With("method", "Concat"))(concatEndpoint)
+		concatEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(concatEndpoint)
+		concatEndpoint = opentracing.TraceServer(otTracer, "Concat")(concatEndpoint)
+		if zipkinTracer != nil {
+			concatEndpoint = zipkin.TraceEndpoint(zipkinTracer, "Concat")(concatEndpoint)
+		}
+		concatEndpoint = LoggingMiddleware(log.With(logger, "method", "Concat"))(concatEndpoint)
+		concatEndpoint = InstrumentingMiddleware(duration.With("method", "Concat"))(concatEndpoint)
 	}
 	return Set{
 		SumEndpoint:    sumEndpoint,

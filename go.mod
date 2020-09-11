@@ -9,7 +9,7 @@ require (
 	github.com/go-kit/kit v0.9.0
 	github.com/go-logfmt/logfmt v0.5.0 // indirect
 	github.com/golang/protobuf v1.3.2
-	github.com/gorilla/mux v1.7.3
+	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/consul/api v1.3.0
 	github.com/joho/godotenv v1.3.0 // indirect
 	github.com/lightstep/lightstep-tracer-go v0.18.1

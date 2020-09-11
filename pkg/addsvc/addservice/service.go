@@ -17,7 +17,7 @@ func New(logger log.Logger, ints, chars metrics.Counter) AddService {
 	var svc AddService
 	{
 		svc = LoggingMiddleware(logger)(svc)
-		//svc = InstrumentingMiddleware(ints, chars)(svc)
+		svc = InstrumentingMiddleware(ints, chars)(svc)
 		svc = NewBasicService()
 	}
 	return svc

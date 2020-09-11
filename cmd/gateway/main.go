@@ -1,35 +1,34 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
-	"google.golang.org/grpc"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
-
-	consulsd "github.com/go-kit/kit/sd/consul"
-	"github.com/gorilla/mux"
-	"github.com/hashicorp/consul/api"
-	stdopentracing "github.com/opentracing/opentracing-go"
-	stdzipkin "github.com/openzipkin/zipkin-go"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/sd"
+	consulsd "github.com/go-kit/kit/sd/consul"
 	"github.com/go-kit/kit/sd/lb"
+	httptransport "github.com/go-kit/kit/transport/http"
+	"github.com/gorilla/mux"
+	"github.com/hashicorp/consul/api"
 
-	"github.com/pascallin/go-micro-services/internal/strsvc"
-	"github.com/pascallin/go-micro-services/internal/strsvc/strtransport"
+	addtransport "github.com/pascallin/go-micro-services/pkg/addsvc/addtransport"
 )
 
 func main() {
 	var (
 		httpAddr     = flag.String("http.addr", ":8000", "Address for HTTP (JSON) server")
-		consulAddr   = flag.String("consul.addr", "localhost:8400", "Consul agent address")
+		consulAddr   = flag.String("consul.addr", "localhost:8500", "Consul agent address")
 		retryMax     = flag.Int("retry.max", 3, "per-request retries to different instances")
 		retryTimeout = flag.Duration("retry.timeout", 500*time.Millisecond, "per-request timeout, including retries")
 	)
@@ -59,30 +58,45 @@ func main() {
 	}
 
 	// Transport domain.
-	tracer := stdopentracing.GlobalTracer() // no-op
-	zipkinTracer, _ := stdzipkin.NewTracer(nil, stdzipkin.WithNoopTracer(true))
-	//ctx := context.Background()
+	//tracer := stdopentracing.GlobalTracer() // no-op
+	//zipkinTracer, _ := stdzipkin.NewTracer(nil, stdzipkin.WithNoopTracer(true))
 	r := mux.NewRouter()
-
+	ctx := context.Background()
 	// Now we begin installing the routes. Each route corresponds to a single
 	// method: sum, concat, uppercase, and count.
 
 	// strsvc routes.
 	{
+		// Each method gets constructed with a factory. Factories take an
+		// instance string, and return a specific endpoint. In the factory we
+		// dial the instance string we get from Consul, and then leverage an
+		// addsvc client package to construct a complete service. We can then
+		// leverage the addsvc.Make{Sum,Concat}Endpoint constructors to convert
+		// the complete service to specific endpoint.
 		var (
 			tags        = []string{}
 			passingOnly = true
-			endpoints   = stringsvc.Set{}
-			instancer   = consulsd.NewInstancer(client, logger, "strsvc", tags, passingOnly)
+			sum   endpoint.Endpoint
+			concat       endpoint.Endpoint
+			instancer   = consulsd.NewInstancer(client, logger, "stringsvc", tags, passingOnly)
 		)
 		{
-			factory := stringsvcFactory(stringsvc.MakeUppercaseEndpoint, tracer, zipkinTracer, logger)
+			factory := addsvcFactory(ctx, "POST", "/sum")
 			endpointer := sd.NewEndpointer(instancer, factory, logger)
 			balancer := lb.NewRoundRobin(endpointer)
 			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
-			endpoints.UppercaseEndpoint = retry
+			sum = retry
 		}
-		r.PathPrefix("/string").Handler(http.StripPrefix("/string", strtransport.NewHTTPHandler(endpoints, tracer, zipkinTracer, logger)))
+		{
+			factory := addsvcFactory(ctx, "POST", "/concat")
+			endpointer := sd.NewEndpointer(instancer, factory, logger)
+			balancer := lb.NewRoundRobin(endpointer)
+			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
+			concat = retry
+		}
+
+		r.Handle("/addsvc/sum", httptransport.NewServer(sum, addtransport.DecodeHTTPSumRequest, addtransport.EncodeHTTPGenericResponse))
+		r.Handle("/addsvc/concat", httptransport.NewServer(concat, addtransport.DecodeHTTPConcatRequest, addtransport.EncodeHTTPGenericResponse))
 	}
 
 	// Interrupt handler.
@@ -103,15 +117,36 @@ func main() {
 	logger.Log("exit", <-errc)
 }
 
-func stringsvcFactory(makeEndpoint func(service stringsvc.StringService) endpoint.Endpoint, tracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, logger log.Logger) sd.Factory {
+func addsvcFactory(ctx context.Context, method, path string) sd.Factory {
 	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
-		conn, err := grpc.Dial(instance, grpc.WithInsecure())
+		if !strings.HasPrefix(instance, "http") {
+			instance = "http://" + instance
+		}
+		tgt, err := url.Parse(instance)
 		if err != nil {
 			return nil, nil, err
 		}
-		service := strtransport.NewGRPCClient(conn, tracer, zipkinTracer, logger)
-		endpoint := makeEndpoint(service)
+		tgt.Path = path
 
-		return endpoint, conn, nil
+		// Since stringsvc doesn't have any kind of package we can import, or
+		// any formal spec, we are forced to just assert where the endpoints
+		// live, and write our own code to encode and decode requests and
+		// responses. Ideally, if you write the service, you will want to
+		// provide stronger guarantees to your clients.
+
+		var (
+			enc httptransport.EncodeRequestFunc
+			dec httptransport.DecodeResponseFunc
+		)
+		switch path {
+		case "/sum":
+			enc, dec = addtransport.EncodeHTTPGenericRequest,  addtransport.DecodeHTTPSumResponse
+		case "/concat":
+			enc, dec =  addtransport.EncodeHTTPGenericRequest,  addtransport.DecodeHTTPConcatResponse
+		default:
+			return nil, nil, fmt.Errorf("unknown stringsvc path %q", path)
+		}
+
+		return httptransport.NewClient(method, tgt, enc, dec).Endpoint(), nil, nil
 	}
 }

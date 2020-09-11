@@ -5,8 +5,21 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/go-kit/kit/circuitbreaker"
+	"github.com/go-kit/kit/ratelimit"
+	"github.com/go-kit/kit/tracing/opentracing"
+	"github.com/go-kit/kit/tracing/zipkin"
+	"github.com/go-kit/kit/transport"
+	"github.com/gorilla/mux"
+	stdopentracing "github.com/opentracing/opentracing-go"
+	stdzipkin "github.com/openzipkin/zipkin-go"
+	"github.com/sony/gobreaker"
+	"golang.org/x/time/rate"
 	"io/ioutil"
 	"net/http"
+	"net/url"
+	"strings"
+	"time"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
@@ -18,26 +31,127 @@ import (
 
 // NewHTTPHandler returns an HTTP handler that makes a set of endpoints
 // available on predefined paths.
-func NewHTTPHandler(endpoints addendpoint.Set, logger log.Logger) http.Handler {
-	//options := []httptransport.ServerOption{
-	//	httptransport.ServerErrorEncoder(errorEncoder),
-	//	httptransport.ServerErrorHandler(transport.NewLogErrorHandler(logger)),
-	//}
+func NewHTTPHandler(endpoints addendpoint.Set, logger log.Logger, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer) http.Handler {
+	options := []httptransport.ServerOption{
+		httptransport.ServerErrorEncoder(errorEncoder),
+		httptransport.ServerErrorHandler(transport.NewLogErrorHandler(logger)),
+	}
+	if zipkinTracer != nil {
+		// Zipkin HTTP Server Trace can either be instantiated per endpoint with a
+		// provided operation name or a global tracing service can be instantiated
+		// without an operation name and fed to each Go kit endpoint as ServerOption.
+		// In the latter case, the operation name will be the endpoint's http method.
+		// We demonstrate a global tracing service here.
+		options = append(options, zipkin.HTTPServerTrace(zipkinTracer))
+	}
 
-	m := http.NewServeMux()
-	m.Handle("/sum", httptransport.NewServer(
+	r := mux.NewRouter()
+	r.Methods("POST").Path("/sum").Handler(httptransport.NewServer(
 		endpoints.SumEndpoint,
-		decodeHTTPSumRequest,
-		encodeHTTPGenericResponse,
-		//append(options, httptransport.ServerBefore(opentracing.HTTPToContext(otTracer, "Sum", logger)))...,
+		DecodeHTTPSumRequest,
+		EncodeHTTPGenericResponse,
+		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(otTracer, "Sum", logger)))...,
 	))
-	m.Handle("/concat", httptransport.NewServer(
+	r.Methods("POST").Path("/concat").Handler(httptransport.NewServer(
 		endpoints.ConcatEndpoint,
-		decodeHTTPConcatRequest,
-		encodeHTTPGenericResponse,
-		//append(options, httptransport.ServerBefore(opentracing.HTTPToContext(otTracer, "Concat", logger)))...,
+		DecodeHTTPConcatRequest,
+		EncodeHTTPGenericResponse,
+		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(otTracer, "Concat", logger)))...,
 	))
-	return m
+	return r
+}
+
+// NewHTTPClient returns an AddService backed by an HTTP server living at the
+// remote instance. We expect instance to come from a service discovery system,
+// so likely of the form "host:port". We bake-in certain middlewares,
+// implementing the client library pattern.
+func NewHTTPClient(instance string, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, logger log.Logger) (addservice.AddService, error) {
+	// Quickly sanitize the instance string.
+	if !strings.HasPrefix(instance, "http") {
+		instance = "http://" + instance
+	}
+	u, err := url.Parse(instance)
+	if err != nil {
+		return nil, err
+	}
+
+	// We construct a single ratelimiter middleware, to limit the total outgoing
+	// QPS from this client to all methods on the remote instance. We also
+	// construct per-endpoint circuitbreaker middlewares to demonstrate how
+	// that's done, although they could easily be combined into a single breaker
+	// for the entire remote instance, too.
+	limiter := ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Every(time.Second), 100))
+
+	// global client middlewares
+	var options []httptransport.ClientOption
+
+	if zipkinTracer != nil {
+		// Zipkin HTTP Client Trace can either be instantiated per endpoint with a
+		// provided operation name or a global tracing client can be instantiated
+		// without an operation name and fed to each Go kit endpoint as ClientOption.
+		// In the latter case, the operation name will be the endpoint's http method.
+		options = append(options, zipkin.HTTPClientTrace(zipkinTracer))
+	}
+
+	// Each individual endpoint is an http/transport.Client (which implements
+	// endpoint.Endpoint) that gets wrapped with various middlewares. If you
+	// made your own client library, you'd do this work there, so your server
+	// could rely on a consistent set of client behavior.
+	var sumEndpoint endpoint.Endpoint
+	{
+		sumEndpoint = httptransport.NewClient(
+			"POST",
+			copyURL(u, "/sum"),
+			EncodeHTTPGenericRequest,
+			DecodeHTTPSumResponse,
+			append(options, httptransport.ClientBefore(opentracing.ContextToHTTP(otTracer, logger)))...,
+		).Endpoint()
+		sumEndpoint = opentracing.TraceClient(otTracer, "Sum")(sumEndpoint)
+		if zipkinTracer != nil {
+			sumEndpoint = zipkin.TraceEndpoint(zipkinTracer, "Sum")(sumEndpoint)
+		}
+		sumEndpoint = limiter(sumEndpoint)
+		sumEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{
+			Name:    "Sum",
+			Timeout: 30 * time.Second,
+		}))(sumEndpoint)
+	}
+
+	// The Concat endpoint is the same thing, with slightly different
+	// middlewares to demonstrate how to specialize per-endpoint.
+	var concatEndpoint endpoint.Endpoint
+	{
+		concatEndpoint = httptransport.NewClient(
+			"POST",
+			copyURL(u, "/concat"),
+			EncodeHTTPGenericRequest,
+			DecodeHTTPConcatResponse,
+			append(options, httptransport.ClientBefore(opentracing.ContextToHTTP(otTracer, logger)))...,
+		).Endpoint()
+		concatEndpoint = opentracing.TraceClient(otTracer, "Concat")(concatEndpoint)
+		if zipkinTracer != nil {
+			concatEndpoint = zipkin.TraceEndpoint(zipkinTracer, "Concat")(concatEndpoint)
+		}
+		concatEndpoint = limiter(concatEndpoint)
+		concatEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{
+			Name:    "Concat",
+			Timeout: 10 * time.Second,
+		}))(concatEndpoint)
+	}
+
+	// Returning the endpoint.Set as a service.Service relies on the
+	// endpoint.Set implementing the Service methods. That's just a simple bit
+	// of glue code.
+	return addendpoint.Set{
+		SumEndpoint:    sumEndpoint,
+		ConcatEndpoint: concatEndpoint,
+	}, nil
+}
+
+func copyURL(base *url.URL, path string) *url.URL {
+	next := *base
+	next.Path = path
+	return &next
 }
 
 func errorEncoder(_ context.Context, err error, w http.ResponseWriter) {
@@ -68,7 +182,7 @@ type errorWrapper struct {
 // decodeHTTPSumRequest is a transport/http.DecodeRequestFunc that decodes a
 // JSON-encoded sum request from the HTTP request body. Primarily useful in a
 // server.
-func decodeHTTPSumRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func DecodeHTTPSumRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req addendpoint.SumRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	return req, err
@@ -77,7 +191,7 @@ func decodeHTTPSumRequest(_ context.Context, r *http.Request) (interface{}, erro
 // decodeHTTPConcatRequest is a transport/http.DecodeRequestFunc that decodes a
 // JSON-encoded concat request from the HTTP request body. Primarily useful in a
 // server.
-func decodeHTTPConcatRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func DecodeHTTPConcatRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req addendpoint.ConcatRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	return req, err
@@ -88,7 +202,7 @@ func decodeHTTPConcatRequest(_ context.Context, r *http.Request) (interface{}, e
 // non-200 status code, we will interpret that as an error and attempt to decode
 // the specific error message from the response body. Primarily useful in a
 // client.
-func decodeHTTPSumResponse(_ context.Context, r *http.Response) (interface{}, error) {
+func DecodeHTTPSumResponse(_ context.Context, r *http.Response) (interface{}, error) {
 	if r.StatusCode != http.StatusOK {
 		return nil, errors.New(r.Status)
 	}
@@ -102,7 +216,7 @@ func decodeHTTPSumResponse(_ context.Context, r *http.Response) (interface{}, er
 // has a non-200 status code, we will interpret that as an error and attempt to
 // decode the specific error message from the response body. Primarily useful in
 // a client.
-func decodeHTTPConcatResponse(_ context.Context, r *http.Response) (interface{}, error) {
+func DecodeHTTPConcatResponse(_ context.Context, r *http.Response) (interface{}, error) {
 	if r.StatusCode != http.StatusOK {
 		return nil, errors.New(r.Status)
 	}
@@ -113,7 +227,7 @@ func decodeHTTPConcatResponse(_ context.Context, r *http.Response) (interface{},
 
 // encodeHTTPGenericRequest is a transport/http.EncodeRequestFunc that
 // JSON-encodes any request to the request body. Primarily useful in a client.
-func encodeHTTPGenericRequest(_ context.Context, r *http.Request, request interface{}) error {
+func EncodeHTTPGenericRequest(_ context.Context, r *http.Request, request interface{}) error {
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(request); err != nil {
 		return err
@@ -124,7 +238,7 @@ func encodeHTTPGenericRequest(_ context.Context, r *http.Request, request interf
 
 // encodeHTTPGenericResponse is a transport/http.EncodeResponseFunc that encodes
 // the response as JSON to the response writer. Primarily useful in a server.
-func encodeHTTPGenericResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+func EncodeHTTPGenericResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	if f, ok := response.(endpoint.Failer); ok && f.Failed() != nil {
 		errorEncoder(ctx, f.Failed(), w)
 		return nil
