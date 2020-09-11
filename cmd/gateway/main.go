@@ -22,7 +22,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/consul/api"
 
-	addtransport "github.com/pascallin/go-micro-services/pkg/addsvc/addtransport"
+	"github.com/pascallin/go-micro-services/pkg/addsvc/addtransport"
 )
 
 func main() {
