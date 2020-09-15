@@ -10,9 +10,17 @@ A micro-services demo base on go-kit examples
 go mod download
 ```
 
-2. consul
+2. consul & zipkin
+
+there are some `docker-compose` files in my other github repository([go to reference](https://github.com/pascallin/devops))
 
 ```
+git clone https://github.com/pascallin/devops.git
+
+cd ./zipkin
+docker-compose up -d
+
+cd ./consul
 docker-compose up -d
 ```
 
