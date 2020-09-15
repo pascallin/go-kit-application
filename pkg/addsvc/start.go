@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/consul/api"
 	"github.com/pascallin/go-micro-services/common/register"
+	"google.golang.org/grpc"
 	"net"
 	"net/http"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/prometheus"
+	kitgrpc "github.com/go-kit/kit/transport/grpc"
 	"github.com/lightstep/lightstep-tracer-go"
 	"github.com/oklog/oklog/pkg/group"
 	stdopentracing "github.com/opentracing/opentracing-go"
@@ -25,6 +27,7 @@ import (
 	"sourcegraph.com/sourcegraph/appdash"
 	appdashot "sourcegraph.com/sourcegraph/appdash/opentracing"
 
+	addpb "github.com/pascallin/go-micro-services/pb"
 	"github.com/pascallin/go-micro-services/pkg/addsvc/addendpoint"
 	"github.com/pascallin/go-micro-services/pkg/addsvc/addservice"
 	"github.com/pascallin/go-micro-services/pkg/addsvc/addtransport"
@@ -34,6 +37,7 @@ func StartAddSVCService() {
 	var (
 		debugAddr      = flag.String("debug.addr", ":8081", "Debug and metrics listen address")
 		httpAddr	= flag.String("http-addr", ":8082", "HTTP listen address")
+		grpcAddr       = flag.String("grpc-addr", ":8083", "gRPC listen address")
 		zipkinURL      = flag.String("zipkin-url", "http://localhost:9411/api/v2/spans", "Enable Zipkin tracing via HTTP reporter URL e.g. http://localhost:9411/api/v2/spans")
 		zipkinBridge   = flag.Bool("zipkin-ot-bridge", false, "Use Zipkin OpenTracing bridge instead of native implementation")
 		lightstepToken = flag.String("lightstep-token", "", "Enable LightStep tracing via a LightStep access token")
@@ -128,6 +132,7 @@ func StartAddSVCService() {
 		service		= addservice.New(logger, ints, chars)
 		endpoints	= addendpoint.New(service, logger, duration, tracer, zipkinTracer)
 		httpHandler	= addtransport.NewHTTPHandler(endpoints, logger, tracer, zipkinTracer)
+		grpcServer     = addtransport.NewGRPCServer(endpoints, tracer, zipkinTracer, logger)
 	)
 
 	var g group.Group
@@ -163,6 +168,24 @@ func StartAddSVCService() {
 			httpListener.Close()
 		})
 	}
+	{
+		// The gRPC listener mounts the Go kit gRPC server we created.
+		grpcListener, err := net.Listen("tcp", *grpcAddr)
+		if err != nil {
+			logger.Log("transport", "gRPC", "during", "Listen", "err", err)
+			os.Exit(1)
+		}
+		g.Add(func() error {
+			logger.Log("transport", "gRPC", "addr", *grpcAddr)
+			// we add the Go Kit gRPC Interceptor to our gRPC service as it is used by
+			// the here demonstrated zipkin tracing middleware.
+			baseServer := grpc.NewServer(grpc.UnaryInterceptor(kitgrpc.Interceptor))
+			addpb.RegisterAddServer(baseServer, grpcServer)
+			return baseServer.Serve(grpcListener)
+		}, func(error) {
+			grpcListener.Close()
+		})
+	}
 
 	{
 		// This function just sits and waits for ctrl-C.
@@ -191,6 +214,26 @@ func StartAddSVCService() {
 		Name:              "addsvc",
 		Tags:              []string{},
 		Port:              8082,
+		Address:           "127.0.0.1",
+		EnableTagOverride: false,
+		Meta:              map[string]string{},
+		Weights: &api.AgentWeights{
+			Passing: 10,
+			Warning: 1,
+		},
+		//Check:             &api.AgentServiceCheck{
+		//	Interval:                       "10s",
+		//	Timeout:                        "5s",
+		//	HTTP:                           "http://192.168.10.106:666/health",
+		//	Method:                         "GET",
+		//},})
+	})
+	ctrl.Register(&api.AgentServiceRegistration{
+		Kind:              "GRPC",
+		ID:                "addsvc_grpc",
+		Name:              "addsvc_grpc",
+		Tags:              []string{},
+		Port:              8083,
 		Address:           "127.0.0.1",
 		EnableTagOverride: false,
 		Meta:              map[string]string{},

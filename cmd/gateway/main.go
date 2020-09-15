@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/hashicorp/consul/api"
 	"io"
 	"net/http"
 	"net/url"
@@ -21,7 +20,13 @@ import (
 	"github.com/go-kit/kit/sd/lb"
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
+	"github.com/hashicorp/consul/api"
+	stdopentracing "github.com/opentracing/opentracing-go"
+	stdzipkin "github.com/openzipkin/zipkin-go"
+	"google.golang.org/grpc"
 
+	"github.com/pascallin/go-micro-services/pkg/addsvc/addendpoint"
+	"github.com/pascallin/go-micro-services/pkg/addsvc/addservice"
 	"github.com/pascallin/go-micro-services/pkg/addsvc/addtransport"
 	"github.com/pascallin/go-micro-services/pkg/stringsvc"
 )
@@ -59,8 +64,8 @@ func main() {
 	}
 
 	// Transport domain.
-	//tracer := stdopentracing.GlobalTracer() // no-op
-	//zipkinTracer, _ := stdzipkin.NewTracer(nil, stdzipkin.WithNoopTracer(true))
+	tracer := stdopentracing.GlobalTracer() // no-op
+	zipkinTracer, _ := stdzipkin.NewTracer(nil, stdzipkin.WithNoopTracer(true))
 	r := mux.NewRouter()
 	ctx := context.Background()
 	// Now we begin installing the routes. Each route corresponds to a single
@@ -98,6 +103,37 @@ func main() {
 
 		r.Handle("/addsvc/sum", httptransport.NewServer(sum, addtransport.DecodeHTTPSumRequest, addtransport.EncodeHTTPGenericResponse))
 		r.Handle("/addsvc/concat", httptransport.NewServer(concat, addtransport.DecodeHTTPConcatRequest, addtransport.EncodeHTTPGenericResponse))
+	}
+	// addsvc routes.
+	{
+		// Each method gets constructed with a factory. Factories take an
+		// instance string, and return a specific endpoint. In the factory we
+		// dial the instance string we get from Consul, and then leverage an
+		// addsvc client package to construct a complete service. We can then
+		// leverage the addsvc.Make{Sum,Concat}Endpoint constructors to convert
+		// the complete service to specific endpoint.
+		var (
+			tags        = []string{}
+			passingOnly = true
+			endpoints   = addendpoint.Set{}
+			instancer   = consulsd.NewInstancer(client, logger, "addsvc_grpc", tags, passingOnly)
+		)
+		{
+			factory := addsvcGRPCFactory(addendpoint.MakeSumEndpoint, tracer, zipkinTracer, logger)
+			endpointer := sd.NewEndpointer(instancer, factory, logger)
+			balancer := lb.NewRoundRobin(endpointer)
+			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
+			endpoints.SumEndpoint = retry
+		}
+		{
+			factory := addsvcGRPCFactory(addendpoint.MakeConcatEndpoint, tracer, zipkinTracer, logger)
+			endpointer := sd.NewEndpointer(instancer, factory, logger)
+			balancer := lb.NewRoundRobin(endpointer)
+			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
+			endpoints.ConcatEndpoint = retry
+		}
+
+		r.PathPrefix("/addsvc/grpc").Handler(http.StripPrefix("/addsvc/grpc", addtransport.NewHTTPHandler(endpoints, logger, tracer, zipkinTracer)))
 	}
 
 	// stringsvc routes
@@ -171,6 +207,31 @@ func addsvcFactory(ctx context.Context, method, path string) sd.Factory {
 		}
 
 		return httptransport.NewClient(method, tgt, enc, dec).Endpoint(), nil, nil
+	}
+}
+
+func addsvcGRPCFactory(makeEndpoint func(service addservice.AddService) endpoint.Endpoint, tracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, logger log.Logger) sd.Factory {
+	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
+		// We could just as easily use the HTTP or Thrift client package to make
+		// the connection to addsvc. We've chosen gRPC arbitrarily. Note that
+		// the transport is an implementation detail: it doesn't leak out of
+		// this function. Nice!
+
+		conn, err := grpc.Dial(instance, grpc.WithInsecure())
+		if err != nil {
+			return nil, nil, err
+		}
+		service := addtransport.NewGRPCClient(conn, tracer, zipkinTracer, logger)
+		endpoint := makeEndpoint(service)
+
+		// Notice that the addsvc gRPC client converts the connection to a
+		// complete addsvc, and we just throw away everything except the method
+		// we're interested in. A smarter factory would mux multiple methods
+		// over the same connection. But that would require more work to manage
+		// the returned io.Closer, e.g. reference counting. Since this is for
+		// the purposes of demonstration, we'll just keep it simple.
+
+		return endpoint, conn, nil
 	}
 }
 
