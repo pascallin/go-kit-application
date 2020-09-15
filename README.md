@@ -1,5 +1,7 @@
 # go-micro-services
 
+A micro-services demo base on go-kit examples
+
 ## run
 
 1. download dependent packages
