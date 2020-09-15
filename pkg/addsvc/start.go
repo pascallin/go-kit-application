@@ -187,6 +187,12 @@ func StartAddSVCService() {
 		})
 	}
 
+	ctrl, err := register.ConnConsul("http://localhost:8500")
+	if err != nil {
+		fmt.Errorf("register error")
+		return
+	}
+
 	{
 		// This function just sits and waits for ctrl-C.
 		cancelInterrupt := make(chan struct{})
@@ -195,6 +201,8 @@ func StartAddSVCService() {
 			signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 			select {
 			case sig := <-c:
+				ctrl.UnRegister("addsvc")
+				ctrl.UnRegister("addsvc_grpc")
 				return fmt.Errorf("received signal %s", sig)
 			case <-cancelInterrupt:
 				return nil
@@ -204,10 +212,6 @@ func StartAddSVCService() {
 		})
 	}
 
-	ctrl, err := register.ConnConsul("http://localhost:8500")
-	if err != nil {
-		fmt.Errorf("register error")
-	}
 	ctrl.Register(&api.AgentServiceRegistration{
 		Kind:              "HTTP",
 		ID:                "addsvc",

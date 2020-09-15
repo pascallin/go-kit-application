@@ -18,11 +18,19 @@ func ConnConsul(addr string) (*ConsulContrl, error) {
 	return csc,err
 }
 
-func (c * ConsulContrl) Register (config *api.AgentServiceRegistration) error {
+func (c *ConsulContrl) Register (config *api.AgentServiceRegistration) error {
 	c.Config = config
 
 	var err error
 	if err = c.Client.Agent().ServiceRegister(c.Config); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *ConsulContrl) UnRegister (serviceId string) error {
+	var err error
+	if err = c.Client.Agent().ServiceDeregister(serviceId); err != nil {
 		return err
 	}
 	return nil
