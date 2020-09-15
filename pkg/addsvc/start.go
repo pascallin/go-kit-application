@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/hashicorp/consul/api"
-	"github.com/pascallin/go-micro-services/common/register"
+	"github.com/pascallin/go-micro-services/common"
 	"google.golang.org/grpc"
 	"net"
 	"net/http"
@@ -187,7 +187,7 @@ func StartAddSVCService() {
 		})
 	}
 
-	ctrl, err := register.ConnConsul("http://localhost:8500")
+	ctrl, err := common.ConnConsul("http://localhost:8500")
 	if err != nil {
 		fmt.Errorf("register error")
 		return

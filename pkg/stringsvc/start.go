@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/pascallin/go-micro-services/common"
 	"log"
 	"net/http"
 	"os"
@@ -17,8 +18,6 @@ import (
 	"github.com/hashicorp/consul/api"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-
-	"github.com/pascallin/go-micro-services/common/register"
 )
 
 func StartStringSVCService() {
@@ -75,7 +74,7 @@ func StartStringSVCService() {
 	router.Handle("/count", countHandler).Methods("POST")
 	router.Handle("/metrics", promhttp.Handler()).Methods("GET")
 
-	ctrl, err := register.ConnConsul("http://localhost:8500")
+	ctrl, err := common.ConnConsul("http://localhost:8500")
 	if err != nil {
 		fmt.Errorf("register error")
 	}

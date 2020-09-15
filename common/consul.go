@@ -1,16 +1,16 @@
-package register
+package common
 
 import (
 	"github.com/hashicorp/consul/api"
 )
 
-type ConsulContrl struct {
+type ConsulControl struct {
 	Client *api.Client
 	Config * api.AgentServiceRegistration
 }
 
-func ConnConsul(addr string) (*ConsulContrl, error) {
-	csc := new(ConsulContrl)
+func ConnConsul(addr string) (*ConsulControl, error) {
+	csc := new(ConsulControl)
 	config := api.DefaultConfig()
 	config.Address = addr
 	var err error
@@ -18,7 +18,7 @@ func ConnConsul(addr string) (*ConsulContrl, error) {
 	return csc,err
 }
 
-func (c *ConsulContrl) Register (config *api.AgentServiceRegistration) error {
+func (c *ConsulControl) Register (config *api.AgentServiceRegistration) error {
 	c.Config = config
 
 	var err error
@@ -28,7 +28,7 @@ func (c *ConsulContrl) Register (config *api.AgentServiceRegistration) error {
 	return nil
 }
 
-func (c *ConsulContrl) UnRegister (serviceId string) error {
+func (c *ConsulControl) UnRegister (serviceId string) error {
 	var err error
 	if err = c.Client.Agent().ServiceDeregister(serviceId); err != nil {
 		return err
