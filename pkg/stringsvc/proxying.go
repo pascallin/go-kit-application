@@ -103,8 +103,8 @@ func makeUppercaseProxy(ctx context.Context, instance string) endpoint.Endpoint 
 	return httptransport.NewClient(
 		"GET",
 		u,
-		encodeRequest,
-		decodeUppercaseResponse,
+		EncodeRequest,
+		DecodeUppercaseResponse,
 	).Endpoint()
 }
 

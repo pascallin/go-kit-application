@@ -3,6 +3,8 @@ package addsvc
 import (
 	"flag"
 	"fmt"
+	"github.com/hashicorp/consul/api"
+	"github.com/pascallin/go-micro-services/common/register"
 	"net"
 	"net/http"
 	"os"
@@ -30,8 +32,8 @@ import (
 
 func StartAddSVCService() {
 	var (
-		debugAddr      = flag.String("debug.addr", ":8080", "Debug and metrics listen address")
-		httpAddr	= flag.String("http-addr", ":8081", "HTTP listen address")
+		debugAddr      = flag.String("debug.addr", ":8081", "Debug and metrics listen address")
+		httpAddr	= flag.String("http-addr", ":8082", "HTTP listen address")
 		zipkinURL      = flag.String("zipkin-url", "http://localhost:9411/api/v2/spans", "Enable Zipkin tracing via HTTP reporter URL e.g. http://localhost:9411/api/v2/spans")
 		zipkinBridge   = flag.Bool("zipkin-ot-bridge", false, "Use Zipkin OpenTracing bridge instead of native implementation")
 		lightstepToken = flag.String("lightstep-token", "", "Enable LightStep tracing via a LightStep access token")
@@ -179,7 +181,30 @@ func StartAddSVCService() {
 		})
 	}
 
+	ctrl, err := register.ConnConsul("http://localhost:8500")
+	if err != nil {
+		fmt.Errorf("register error")
+	}
+	ctrl.Register(&api.AgentServiceRegistration{
+		Kind:              "HTTP",
+		ID:                "addsvc",
+		Name:              "addsvc",
+		Tags:              []string{},
+		Port:              8082,
+		Address:           "127.0.0.1",
+		EnableTagOverride: false,
+		Meta:              map[string]string{},
+		Weights: &api.AgentWeights{
+			Passing: 10,
+			Warning: 1,
+		},
+		//Check:             &api.AgentServiceCheck{
+		//	Interval:                       "10s",
+		//	Timeout:                        "5s",
+		//	HTTP:                           "http://192.168.10.106:666/health",
+		//	Method:                         "GET",
+		//},})
+	})
+
 	logger.Log("exit", g.Run())
 }
-
-

@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/hashicorp/consul/api"
 	"io"
 	"net/http"
 	"net/url"
@@ -20,15 +21,15 @@ import (
 	"github.com/go-kit/kit/sd/lb"
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
-	"github.com/hashicorp/consul/api"
 
 	"github.com/pascallin/go-micro-services/pkg/addsvc/addtransport"
+	"github.com/pascallin/go-micro-services/pkg/stringsvc"
 )
 
 func main() {
 	var (
 		httpAddr     = flag.String("http.addr", ":8000", "Address for HTTP (JSON) server")
-		consulAddr   = flag.String("consul.addr", "localhost:8500", "Consul agent address")
+		consulAddr   = flag.String("consul.addr", ":8500", "Consul agent address")
 		retryMax     = flag.Int("retry.max", 3, "per-request retries to different instances")
 		retryTimeout = flag.Duration("retry.timeout", 500*time.Millisecond, "per-request timeout, including retries")
 	)
@@ -76,9 +77,9 @@ func main() {
 		var (
 			tags        = []string{}
 			passingOnly = true
-			sum   endpoint.Endpoint
-			concat       endpoint.Endpoint
-			instancer   = consulsd.NewInstancer(client, logger, "stringsvc", tags, passingOnly)
+			sum   		endpoint.Endpoint
+			concat		endpoint.Endpoint
+			instancer   = consulsd.NewInstancer(client, logger, "addsvc", tags, passingOnly)
 		)
 		{
 			factory := addsvcFactory(ctx, "POST", "/sum")
@@ -97,6 +98,34 @@ func main() {
 
 		r.Handle("/addsvc/sum", httptransport.NewServer(sum, addtransport.DecodeHTTPSumRequest, addtransport.EncodeHTTPGenericResponse))
 		r.Handle("/addsvc/concat", httptransport.NewServer(concat, addtransport.DecodeHTTPConcatRequest, addtransport.EncodeHTTPGenericResponse))
+	}
+
+	// stringsvc routes
+	{
+		var (
+			tags        = []string{}
+			passingOnly = true
+			uppercase   		endpoint.Endpoint
+			count		endpoint.Endpoint
+			instancer   = consulsd.NewInstancer(client, logger, "addstring", tags, passingOnly)
+		)
+		{
+			factory := stringsvcFactory(ctx, "POST", "/uppercase")
+			endpointer := sd.NewEndpointer(instancer, factory, logger)
+			balancer := lb.NewRoundRobin(endpointer)
+			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
+			uppercase = retry
+		}
+		{
+			factory := stringsvcFactory(ctx, "POST", "/count")
+			endpointer := sd.NewEndpointer(instancer, factory, logger)
+			balancer := lb.NewRoundRobin(endpointer)
+			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
+			count = retry
+		}
+
+		r.Handle("/stringsvc/uppercase", httptransport.NewServer(uppercase, stringsvc.DecodeUppercaseRequest, stringsvc.EncodeResponse))
+		r.Handle("/stringsvc/count", httptransport.NewServer(count, stringsvc.DecodeUppercaseRequest, stringsvc.EncodeResponse))
 	}
 
 	// Interrupt handler.
@@ -128,12 +157,6 @@ func addsvcFactory(ctx context.Context, method, path string) sd.Factory {
 		}
 		tgt.Path = path
 
-		// Since stringsvc doesn't have any kind of package we can import, or
-		// any formal spec, we are forced to just assert where the endpoints
-		// live, and write our own code to encode and decode requests and
-		// responses. Ideally, if you write the service, you will want to
-		// provide stronger guarantees to your clients.
-
 		var (
 			enc httptransport.EncodeRequestFunc
 			dec httptransport.DecodeResponseFunc
@@ -143,6 +166,34 @@ func addsvcFactory(ctx context.Context, method, path string) sd.Factory {
 			enc, dec = addtransport.EncodeHTTPGenericRequest,  addtransport.DecodeHTTPSumResponse
 		case "/concat":
 			enc, dec =  addtransport.EncodeHTTPGenericRequest,  addtransport.DecodeHTTPConcatResponse
+		default:
+			return nil, nil, fmt.Errorf("unknown stringsvc path %q", path)
+		}
+
+		return httptransport.NewClient(method, tgt, enc, dec).Endpoint(), nil, nil
+	}
+}
+
+func stringsvcFactory(ctx context.Context, method, path string) sd.Factory {
+	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
+		if !strings.HasPrefix(instance, "http") {
+			instance = "http://" + instance
+		}
+		tgt, err := url.Parse(instance)
+		if err != nil {
+			return nil, nil, err
+		}
+		tgt.Path = path
+
+		var (
+			enc httptransport.EncodeRequestFunc
+			dec httptransport.DecodeResponseFunc
+		)
+		switch path {
+		case "/uppercase":
+			enc, dec = stringsvc.EncodeRequest,  stringsvc.DecodeUppercaseResponse
+		case "/count":
+			enc, dec = stringsvc.EncodeRequest,  stringsvc.DecodeCountResponse
 		default:
 			return nil, nil, fmt.Errorf("unknown stringsvc path %q", path)
 		}
