@@ -2,20 +2,19 @@ package addendpoint
 
 import (
 	"context"
+	"time"
+
 	"github.com/go-kit/kit/circuitbreaker"
+	"github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics"
+	"github.com/go-kit/kit/ratelimit"
 	"github.com/go-kit/kit/tracing/opentracing"
 	"github.com/go-kit/kit/tracing/zipkin"
 	stdopentracing "github.com/opentracing/opentracing-go"
 	stdzipkin "github.com/openzipkin/zipkin-go"
 	"github.com/sony/gobreaker"
-	"time"
-
 	"golang.org/x/time/rate"
-
-	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/metrics"
-	"github.com/go-kit/kit/ratelimit"
 
 	"github.com/pascallin/go-micro-services/pkg/addsvc/addservice"
 )

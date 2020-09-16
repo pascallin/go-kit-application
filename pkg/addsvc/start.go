@@ -132,7 +132,7 @@ func StartAddSVCService() {
 		service		= addservice.New(logger, ints, chars)
 		endpoints	= addendpoint.New(service, logger, duration, tracer, zipkinTracer)
 		httpHandler	= addtransport.NewHTTPHandler(endpoints, logger, tracer, zipkinTracer)
-		grpcServer     = addtransport.NewGRPCServer(endpoints, tracer, zipkinTracer, logger)
+		grpcServer  = addtransport.NewGRPCServer(endpoints, tracer, zipkinTracer, logger)
 	)
 
 	var g group.Group
