@@ -68,17 +68,9 @@ func main() {
 	zipkinTracer, _ := stdzipkin.NewTracer(nil, stdzipkin.WithNoopTracer(true))
 	r := mux.NewRouter()
 	ctx := context.Background()
-	// Now we begin installing the routes. Each route corresponds to a single
-	// method: sum, concat, uppercase, and count.
 
 	// strsvc routes.
 	{
-		// Each method gets constructed with a factory. Factories take an
-		// instance string, and return a specific endpoint. In the factory we
-		// dial the instance string we get from Consul, and then leverage an
-		// addsvc client package to construct a complete service. We can then
-		// leverage the addsvc.Make{Sum,Concat}Endpoint constructors to convert
-		// the complete service to specific endpoint.
 		var (
 			tags        = []string{}
 			passingOnly = true
@@ -106,12 +98,6 @@ func main() {
 	}
 	// addsvc routes.
 	{
-		// Each method gets constructed with a factory. Factories take an
-		// instance string, and return a specific endpoint. In the factory we
-		// dial the instance string we get from Consul, and then leverage an
-		// addsvc client package to construct a complete service. We can then
-		// leverage the addsvc.Make{Sum,Concat}Endpoint constructors to convert
-		// the complete service to specific endpoint.
 		var (
 			tags        = []string{}
 			passingOnly = true
@@ -212,25 +198,12 @@ func addsvcFactory(ctx context.Context, method, path string) sd.Factory {
 
 func addsvcGRPCFactory(makeEndpoint func(service addservice.AddService) endpoint.Endpoint, tracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, logger log.Logger) sd.Factory {
 	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
-		// We could just as easily use the HTTP or Thrift client package to make
-		// the connection to addsvc. We've chosen gRPC arbitrarily. Note that
-		// the transport is an implementation detail: it doesn't leak out of
-		// this function. Nice!
-
 		conn, err := grpc.Dial(instance, grpc.WithInsecure())
 		if err != nil {
 			return nil, nil, err
 		}
 		service := addtransport.NewGRPCClient(conn, tracer, zipkinTracer, logger)
 		endpoint := makeEndpoint(service)
-
-		// Notice that the addsvc gRPC client converts the connection to a
-		// complete addsvc, and we just throw away everything except the method
-		// we're interested in. A smarter factory would mux multiple methods
-		// over the same connection. But that would require more work to manage
-		// the returned io.Closer, e.g. reference counting. Since this is for
-		// the purposes of demonstration, we'll just keep it simple.
-
 		return endpoint, conn, nil
 	}
 }

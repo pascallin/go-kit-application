@@ -41,8 +41,8 @@ func NewService(logger log.Logger, ints, chars metrics.Counter) stringService {
 	var svc stringService
 	{
 		svc = NewStringService()
-		// svc = LoggingMiddleware(logger)(svc)
-		//svc = InstrumentingMiddleware(ints, chars)(svc)
+		//svc = loggingMiddleware(logger)(svc)
+		//svc = instrumentingMiddleware(ints, chars)(svc)
 	}
 	return svc
 }
