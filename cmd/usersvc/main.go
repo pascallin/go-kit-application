@@ -13,10 +13,10 @@ import (
 	"github.com/oklog/oklog/pkg/group"
 	"google.golang.org/grpc"
 
-	"github.com/pascallin/go-micro-services/internal/pkg/db"
-	"github.com/pascallin/go-micro-services/internal/usersvc"
-	"github.com/pascallin/go-micro-services/internal/usersvc/transports"
-	"github.com/pascallin/go-micro-services/pb"
+	"github.com/pascallin/go-kit-application/internal/pkg/db"
+	"github.com/pascallin/go-kit-application/internal/usersvc"
+	"github.com/pascallin/go-kit-application/internal/usersvc/transports"
+	"github.com/pascallin/go-kit-application/pb"
 )
 
 func main() {

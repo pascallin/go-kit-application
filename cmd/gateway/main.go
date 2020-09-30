@@ -25,10 +25,10 @@ import (
 	stdzipkin "github.com/openzipkin/zipkin-go"
 	"google.golang.org/grpc"
 
-	"github.com/pascallin/go-micro-services/internal/addsvc/addendpoint"
-	"github.com/pascallin/go-micro-services/internal/addsvc/addservice"
-	"github.com/pascallin/go-micro-services/internal/addsvc/addtransport"
-	"github.com/pascallin/go-micro-services/internal/stringsvc"
+	"github.com/pascallin/go-kit-application/internal/addsvc/addendpoint"
+	"github.com/pascallin/go-kit-application/internal/addsvc/addservice"
+	"github.com/pascallin/go-kit-application/internal/addsvc/addtransport"
+	"github.com/pascallin/go-kit-application/internal/stringsvc"
 )
 
 func main() {
@@ -74,8 +74,8 @@ func main() {
 		var (
 			tags        = []string{}
 			passingOnly = true
-			sum   		endpoint.Endpoint
-			concat		endpoint.Endpoint
+			sum         endpoint.Endpoint
+			concat      endpoint.Endpoint
 			instancer   = consulsd.NewInstancer(client, logger, "addsvc", tags, passingOnly)
 		)
 		{
@@ -127,8 +127,8 @@ func main() {
 		var (
 			tags        = []string{}
 			passingOnly = true
-			uppercase   		endpoint.Endpoint
-			count		endpoint.Endpoint
+			uppercase   endpoint.Endpoint
+			count       endpoint.Endpoint
 			instancer   = consulsd.NewInstancer(client, logger, "addstring", tags, passingOnly)
 		)
 		{

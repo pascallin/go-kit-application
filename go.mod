@@ -1,4 +1,4 @@
-module github.com/pascallin/go-micro-services
+module github.com/pascallin/go-kit-application
 
 go 1.13
 

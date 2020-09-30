@@ -1,10 +1,9 @@
 package main
 
 import (
-	"github.com/pascallin/go-micro-services/internal/addsvc"
+	"github.com/pascallin/go-kit-application/internal/addsvc"
 )
 
 func main() {
 	addsvc.StartAddSVCService()
 }
-
