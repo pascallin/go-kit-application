@@ -29,8 +29,8 @@ import (
 	addendpoint "github.com/pascallin/go-kit-application/internal/addsvc/addendpoint"
 	addservice "github.com/pascallin/go-kit-application/internal/addsvc/addservice"
 	addtransport "github.com/pascallin/go-kit-application/internal/addsvc/addtransport"
+	"github.com/pascallin/go-kit-application/internal/pkg/discovery"
 	addpb "github.com/pascallin/go-kit-application/pb"
-	"github.com/pascallin/go-kit-application/pkg"
 )
 
 func StartAddSVCService() {
@@ -187,7 +187,7 @@ func StartAddSVCService() {
 		})
 	}
 
-	ctrl, err := pkg.ConnConsul("http://localhost:8500")
+	ctrl, err := discovery.ConnConsul("http://localhost:8500")
 	if err != nil {
 		fmt.Errorf("register error")
 		return

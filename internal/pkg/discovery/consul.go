@@ -1,4 +1,4 @@
-package pkg
+package discovery
 
 import (
 	"github.com/hashicorp/consul/api"
