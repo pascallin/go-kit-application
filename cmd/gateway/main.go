@@ -25,10 +25,10 @@ import (
 	stdzipkin "github.com/openzipkin/zipkin-go"
 	"google.golang.org/grpc"
 
-	"github.com/pascallin/go-micro-services/pkg/addsvc/addendpoint"
-	"github.com/pascallin/go-micro-services/pkg/addsvc/addservice"
-	"github.com/pascallin/go-micro-services/pkg/addsvc/addtransport"
-	"github.com/pascallin/go-micro-services/pkg/stringsvc"
+	"github.com/pascallin/go-micro-services/internal/addsvc/addendpoint"
+	"github.com/pascallin/go-micro-services/internal/addsvc/addservice"
+	"github.com/pascallin/go-micro-services/internal/addsvc/addtransport"
+	"github.com/pascallin/go-micro-services/internal/stringsvc"
 )
 
 func main() {
@@ -185,9 +185,9 @@ func addsvcFactory(ctx context.Context, method, path string) sd.Factory {
 		)
 		switch path {
 		case "/sum":
-			enc, dec = addtransport.EncodeHTTPGenericRequest,  addtransport.DecodeHTTPSumResponse
+			enc, dec = addtransport.EncodeHTTPGenericRequest, addtransport.DecodeHTTPSumResponse
 		case "/concat":
-			enc, dec =  addtransport.EncodeHTTPGenericRequest,  addtransport.DecodeHTTPConcatResponse
+			enc, dec = addtransport.EncodeHTTPGenericRequest, addtransport.DecodeHTTPConcatResponse
 		default:
 			return nil, nil, fmt.Errorf("unknown stringsvc path %q", path)
 		}
@@ -225,9 +225,9 @@ func stringsvcFactory(ctx context.Context, method, path string) sd.Factory {
 		)
 		switch path {
 		case "/uppercase":
-			enc, dec = stringsvc.EncodeRequest,  stringsvc.DecodeUppercaseResponse
+			enc, dec = stringsvc.EncodeRequest, stringsvc.DecodeUppercaseResponse
 		case "/count":
-			enc, dec = stringsvc.EncodeRequest,  stringsvc.DecodeCountResponse
+			enc, dec = stringsvc.EncodeRequest, stringsvc.DecodeCountResponse
 		default:
 			return nil, nil, fmt.Errorf("unknown stringsvc path %q", path)
 		}
