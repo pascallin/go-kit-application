@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"github.com/hashicorp/consul/api"
 	"github.com/pascallin/go-micro-services/common"
+	addendpoint2 "github.com/pascallin/go-micro-services/internal/addsvc/addendpoint"
+	addservice2 "github.com/pascallin/go-micro-services/internal/addsvc/addservice"
+	addtransport2 "github.com/pascallin/go-micro-services/internal/addsvc/addtransport"
 	"google.golang.org/grpc"
 	"net"
 	"net/http"
@@ -28,9 +31,6 @@ import (
 	appdashot "sourcegraph.com/sourcegraph/appdash/opentracing"
 
 	addpb "github.com/pascallin/go-micro-services/pb"
-	"github.com/pascallin/go-micro-services/pkg/addsvc/addendpoint"
-	"github.com/pascallin/go-micro-services/pkg/addsvc/addservice"
-	"github.com/pascallin/go-micro-services/pkg/addsvc/addtransport"
 )
 
 func StartAddSVCService() {
@@ -129,10 +129,10 @@ func StartAddSVCService() {
 	http.DefaultServeMux.Handle("/metrics", promhttp.Handler())
 
 	var (
-		service		= addservice.New(logger, ints, chars)
-		endpoints	= addendpoint.New(service, logger, duration, tracer, zipkinTracer)
-		httpHandler	= addtransport.NewHTTPHandler(endpoints, logger, tracer, zipkinTracer)
-		grpcServer  = addtransport.NewGRPCServer(endpoints, tracer, zipkinTracer, logger)
+		service		= addservice2.New(logger, ints, chars)
+		endpoints	= addendpoint2.New(service, logger, duration, tracer, zipkinTracer)
+		httpHandler	= addtransport2.NewHTTPHandler(endpoints, logger, tracer, zipkinTracer)
+		grpcServer  = addtransport2.NewGRPCServer(endpoints, tracer, zipkinTracer, logger)
 	)
 
 	var g group.Group

@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	addendpoint2 "github.com/pascallin/go-micro-services/internal/addsvc/addendpoint"
+	addservice2 "github.com/pascallin/go-micro-services/internal/addsvc/addservice"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -24,12 +26,9 @@ import (
 	stdzipkin "github.com/openzipkin/zipkin-go"
 	"github.com/sony/gobreaker"
 	"golang.org/x/time/rate"
-
-	"github.com/pascallin/go-micro-services/pkg/addsvc/addendpoint"
-	"github.com/pascallin/go-micro-services/pkg/addsvc/addservice"
 )
 
-func NewHTTPHandler(endpoints addendpoint.Set, logger log.Logger, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer) http.Handler {
+func NewHTTPHandler(endpoints addendpoint2.Set, logger log.Logger, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer) http.Handler {
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorEncoder(errorEncoder),
 		httptransport.ServerErrorHandler(transport.NewLogErrorHandler(logger)),
@@ -54,7 +53,7 @@ func NewHTTPHandler(endpoints addendpoint.Set, logger log.Logger, otTracer stdop
 	return r
 }
 
-func NewHTTPClient(instance string, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, logger log.Logger) (addservice.AddService, error) {
+func NewHTTPClient(instance string, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, logger log.Logger) (addservice2.AddService, error) {
 	// Quickly sanitize the instance string.
 	if !strings.HasPrefix(instance, "http") {
 		instance = "http://" + instance
@@ -114,7 +113,7 @@ func NewHTTPClient(instance string, otTracer stdopentracing.Tracer, zipkinTracer
 		}))(concatEndpoint)
 	}
 
-	return addendpoint.Set{
+	return addendpoint2.Set{
 		SumEndpoint:    sumEndpoint,
 		ConcatEndpoint: concatEndpoint,
 	}, nil
@@ -133,7 +132,7 @@ func errorEncoder(_ context.Context, err error, w http.ResponseWriter) {
 
 func err2code(err error) int {
 	switch err {
-	case addservice.ErrTwoZeroes, addservice.ErrMaxSizeExceeded, addservice.ErrIntOverflow:
+	case addservice2.ErrTwoZeroes, addservice2.ErrMaxSizeExceeded, addservice2.ErrIntOverflow:
 		return http.StatusBadRequest
 	}
 	return http.StatusInternalServerError
@@ -152,13 +151,13 @@ type errorWrapper struct {
 }
 
 func DecodeHTTPSumRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req addendpoint.SumRequest
+	var req addendpoint2.SumRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	return req, err
 }
 
 func DecodeHTTPConcatRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req addendpoint.ConcatRequest
+	var req addendpoint2.ConcatRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	return req, err
 }
@@ -167,7 +166,7 @@ func DecodeHTTPSumResponse(_ context.Context, r *http.Response) (interface{}, er
 	if r.StatusCode != http.StatusOK {
 		return nil, errors.New(r.Status)
 	}
-	var resp addendpoint.SumResponse
+	var resp addendpoint2.SumResponse
 	err := json.NewDecoder(r.Body).Decode(&resp)
 	return resp, err
 }
@@ -176,7 +175,7 @@ func DecodeHTTPConcatResponse(_ context.Context, r *http.Response) (interface{},
 	if r.StatusCode != http.StatusOK {
 		return nil, errors.New(r.Status)
 	}
-	var resp addendpoint.ConcatResponse
+	var resp addendpoint2.ConcatResponse
 	err := json.NewDecoder(r.Body).Decode(&resp)
 	return resp, err
 }

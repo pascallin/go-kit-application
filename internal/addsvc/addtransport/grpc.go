@@ -3,14 +3,12 @@ package addtransport
 import (
 	"context"
 	"errors"
-	"github.com/go-kit/kit/examples/addsvc/pkg/addservice"
-	"github.com/go-kit/kit/ratelimit"
-	"golang.org/x/time/rate"
 	"time"
 
 	"github.com/go-kit/kit/circuitbreaker"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/ratelimit"
 	"github.com/go-kit/kit/tracing/opentracing"
 	"github.com/go-kit/kit/tracing/zipkin"
 	"github.com/go-kit/kit/transport"
@@ -18,10 +16,12 @@ import (
 	stdopentracing "github.com/opentracing/opentracing-go"
 	stdzipkin "github.com/openzipkin/zipkin-go"
 	"github.com/sony/gobreaker"
+	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 
+	addendpoint "github.com/pascallin/go-micro-services/internal/addsvc/addendpoint"
+	"github.com/pascallin/go-micro-services/internal/addsvc/addservice"
 	"github.com/pascallin/go-micro-services/pb"
-	"github.com/pascallin/go-micro-services/pkg/addsvc/addendpoint"
 )
 
 type grpcServer struct {
@@ -124,7 +124,7 @@ func err2str(err error) string {
 	return err.Error()
 }
 
-func NewGRPCClient(conn *grpc.ClientConn, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, logger log.Logger) addservice.Service {
+func NewGRPCClient(conn *grpc.ClientConn, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, logger log.Logger) addservice.AddService {
 	// We construct a single ratelimiter middleware, to limit the total outgoing
 	// QPS from this client to all methods on the remote instance. We also
 	// construct per-endpoint circuitbreaker middlewares to demonstrate how
