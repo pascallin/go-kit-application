@@ -5,8 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	addendpoint2 "github.com/pascallin/go-micro-services/internal/addsvc/addendpoint"
-	addservice2 "github.com/pascallin/go-micro-services/internal/addsvc/addservice"
+	addendpoint2 "github.com/pascallin/go-kit-application/internal/addsvc/addendpoint"
+	addservice2 "github.com/pascallin/go-kit-application/internal/addsvc/addservice"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -62,7 +62,6 @@ func NewHTTPClient(instance string, otTracer stdopentracing.Tracer, zipkinTracer
 	if err != nil {
 		return nil, err
 	}
-
 
 	limiter := ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Every(time.Second), 100))
 

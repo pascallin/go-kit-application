@@ -7,8 +7,8 @@ import (
 	"github.com/go-kit/kit/transport"
 	"github.com/go-kit/kit/transport/grpc"
 
-	"github.com/pascallin/go-micro-services/internal/usersvc"
-	"github.com/pascallin/go-micro-services/pb"
+	"github.com/pascallin/go-kit-application/internal/usersvc"
+	"github.com/pascallin/go-kit-application/pb"
 )
 
 type grpcServer struct {

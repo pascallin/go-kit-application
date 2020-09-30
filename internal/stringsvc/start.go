@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/pascallin/go-micro-services/common"
 	"log"
 	"net/http"
 	"os"
@@ -101,12 +100,12 @@ func StartStringSVCService() {
 	})
 
 	srv := &http.Server{
-		Addr:         *listen,
+		Addr: *listen,
 		// Good practice to set timeouts to avoid Slowloris attacks.
 		WriteTimeout: time.Second * 15,
 		ReadTimeout:  time.Second * 15,
 		IdleTimeout:  time.Second * 60,
-		Handler: router, // Pass our instance of gorilla/mux in.
+		Handler:      router, // Pass our instance of gorilla/mux in.
 	}
 
 	go func() {
@@ -116,7 +115,6 @@ func StartStringSVCService() {
 	}()
 
 	logger.Log("msg", "HTTP", "addr", *listen)
-
 
 	c := make(chan os.Signal, 1)
 	// We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C)

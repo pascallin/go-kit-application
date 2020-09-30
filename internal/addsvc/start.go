@@ -3,12 +3,6 @@ package addsvc
 import (
 	"flag"
 	"fmt"
-	"github.com/hashicorp/consul/api"
-	"github.com/pascallin/go-micro-services/common"
-	addendpoint2 "github.com/pascallin/go-micro-services/internal/addsvc/addendpoint"
-	addservice2 "github.com/pascallin/go-micro-services/internal/addsvc/addservice"
-	addtransport2 "github.com/pascallin/go-micro-services/internal/addsvc/addtransport"
-	"google.golang.org/grpc"
 	"net"
 	"net/http"
 	"os"
@@ -19,6 +13,7 @@ import (
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/prometheus"
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
+	"github.com/hashicorp/consul/api"
 	"github.com/lightstep/lightstep-tracer-go"
 	"github.com/oklog/oklog/pkg/group"
 	stdopentracing "github.com/opentracing/opentracing-go"
@@ -27,16 +22,21 @@ import (
 	zipkinhttp "github.com/openzipkin/zipkin-go/reporter/http"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"google.golang.org/grpc"
 	"sourcegraph.com/sourcegraph/appdash"
 	appdashot "sourcegraph.com/sourcegraph/appdash/opentracing"
 
-	addpb "github.com/pascallin/go-micro-services/pb"
+	addendpoint "github.com/pascallin/go-kit-application/internal/addsvc/addendpoint"
+	addservice "github.com/pascallin/go-kit-application/internal/addsvc/addservice"
+	addtransport "github.com/pascallin/go-kit-application/internal/addsvc/addtransport"
+	addpb "github.com/pascallin/go-kit-application/pb"
+	"github.com/pascallin/go-kit-application/pkg"
 )
 
 func StartAddSVCService() {
 	var (
 		debugAddr      = flag.String("debug.addr", ":8081", "Debug and metrics listen address")
-		httpAddr	= flag.String("http-addr", ":8082", "HTTP listen address")
+		httpAddr       = flag.String("http-addr", ":8082", "HTTP listen address")
 		grpcAddr       = flag.String("grpc-addr", ":8083", "gRPC listen address")
 		zipkinURL      = flag.String("zipkin-url", "http://localhost:9411/api/v2/spans", "Enable Zipkin tracing via HTTP reporter URL e.g. http://localhost:9411/api/v2/spans")
 		zipkinBridge   = flag.Bool("zipkin-ot-bridge", false, "Use Zipkin OpenTracing bridge instead of native implementation")
@@ -129,10 +129,10 @@ func StartAddSVCService() {
 	http.DefaultServeMux.Handle("/metrics", promhttp.Handler())
 
 	var (
-		service		= addservice2.New(logger, ints, chars)
-		endpoints	= addendpoint2.New(service, logger, duration, tracer, zipkinTracer)
-		httpHandler	= addtransport2.NewHTTPHandler(endpoints, logger, tracer, zipkinTracer)
-		grpcServer  = addtransport2.NewGRPCServer(endpoints, tracer, zipkinTracer, logger)
+		service     = addservice.New(logger, ints, chars)
+		endpoints   = addendpoint.New(service, logger, duration, tracer, zipkinTracer)
+		httpHandler = addtransport.NewHTTPHandler(endpoints, logger, tracer, zipkinTracer)
+		grpcServer  = addtransport.NewGRPCServer(endpoints, tracer, zipkinTracer, logger)
 	)
 
 	var g group.Group
@@ -187,7 +187,7 @@ func StartAddSVCService() {
 		})
 	}
 
-	ctrl, err := common.ConnConsul("http://localhost:8500")
+	ctrl, err := pkg.ConnConsul("http://localhost:8500")
 	if err != nil {
 		fmt.Errorf("register error")
 		return

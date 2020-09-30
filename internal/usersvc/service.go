@@ -14,7 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
-	"github.com/pascallin/go-micro-services/internal/pkg/db"
+	"github.com/pascallin/go-kit-application/internal/pkg/db"
 )
 
 type User struct {
