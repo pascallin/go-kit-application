@@ -14,34 +14,24 @@ import (
 	"github.com/go-kit/kit/metrics/prometheus"
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
 	"github.com/hashicorp/consul/api"
-	"github.com/lightstep/lightstep-tracer-go"
 	"github.com/oklog/oklog/pkg/group"
-	stdopentracing "github.com/opentracing/opentracing-go"
-	zipkinot "github.com/openzipkin-contrib/zipkin-go-opentracing"
-	"github.com/openzipkin/zipkin-go"
-	zipkinhttp "github.com/openzipkin/zipkin-go/reporter/http"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
-	"sourcegraph.com/sourcegraph/appdash"
-	appdashot "sourcegraph.com/sourcegraph/appdash/opentracing"
 
 	addendpoint "github.com/pascallin/go-kit-application/internal/addsvc/addendpoint"
 	addservice "github.com/pascallin/go-kit-application/internal/addsvc/addservice"
 	addtransport "github.com/pascallin/go-kit-application/internal/addsvc/addtransport"
 	"github.com/pascallin/go-kit-application/internal/pkg/discovery"
+	"github.com/pascallin/go-kit-application/internal/pkg/tracer"
 	addpb "github.com/pascallin/go-kit-application/pb"
 )
 
 func StartAddSVCService() {
 	var (
-		debugAddr      = flag.String("debug.addr", ":8081", "Debug and metrics listen address")
-		httpAddr       = flag.String("http-addr", ":8082", "HTTP listen address")
-		grpcAddr       = flag.String("grpc-addr", ":8083", "gRPC listen address")
-		zipkinURL      = flag.String("zipkin-url", "http://localhost:9411/api/v2/spans", "Enable Zipkin tracing via HTTP reporter URL e.g. http://localhost:9411/api/v2/spans")
-		zipkinBridge   = flag.Bool("zipkin-ot-bridge", false, "Use Zipkin OpenTracing bridge instead of native implementation")
-		lightstepToken = flag.String("lightstep-token", "", "Enable LightStep tracing via a LightStep access token")
-		appdashAddr    = flag.String("appdash-addr", "", "Enable Appdash tracing via an Appdash server host:port")
+		debugAddr = flag.String("debug.addr", ":8081", "Debug and metrics listen address")
+		httpAddr  = flag.String("http-addr", ":8082", "HTTP listen address")
+		grpcAddr  = flag.String("grpc-addr", ":8083", "gRPC listen address")
 	)
 
 	flag.Parse()
@@ -54,48 +44,9 @@ func StartAddSVCService() {
 		logger = log.With(logger, "caller", log.DefaultCaller)
 	}
 
-	var zipkinTracer *zipkin.Tracer
-	{
-		if *zipkinURL != "" {
-			var (
-				err         error
-				hostPort    = "localhost:80"
-				serviceName = "addsvc"
-				reporter    = zipkinhttp.NewReporter(*zipkinURL)
-			)
-			defer reporter.Close()
-			zEP, _ := zipkin.NewEndpoint(serviceName, hostPort)
-			zipkinTracer, err = zipkin.NewTracer(reporter, zipkin.WithLocalEndpoint(zEP))
-			if err != nil {
-				logger.Log("err", err)
-				os.Exit(1)
-			}
-			if !(*zipkinBridge) {
-				logger.Log("tracer", "Zipkin", "type", "Native", "URL", *zipkinURL)
-			}
-		}
-	}
-
-	// Determine which OpenTracing tracer to use. We'll pass the tracer to all the
-	// components that use it, as a dependency.
-	var tracer stdopentracing.Tracer
-	{
-		if *zipkinBridge && zipkinTracer != nil {
-			logger.Log("tracer", "Zipkin", "type", "OpenTracing", "URL", *zipkinURL)
-			tracer = zipkinot.Wrap(zipkinTracer)
-			zipkinTracer = nil // do not instrument with both native tracer and opentracing bridge
-		} else if *lightstepToken != "" {
-			logger.Log("tracer", "LightStep") // probably don't want to print out the token :)
-			tracer = lightstep.NewTracer(lightstep.Options{
-				AccessToken: *lightstepToken,
-			})
-			defer lightstep.FlushLightStepTracer(tracer)
-		} else if *appdashAddr != "" {
-			logger.Log("tracer", "Appdash", "addr", *appdashAddr)
-			tracer = appdashot.NewTracer(appdash.NewRemoteCollector(*appdashAddr))
-		} else {
-			tracer = stdopentracing.GlobalTracer() // no-op
-		}
+	zipkinTracer, tracer, err := tracer.NewOpentracingTracer("localhost:80", "addsvc")
+	if err != nil {
+		panic(err)
 	}
 
 	// Create the (sparse) metrics we'll use in the service. They, too, are
