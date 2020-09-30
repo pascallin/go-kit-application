@@ -1,4 +1,4 @@
-package common
+package pkg
 
 import (
 	"github.com/hashicorp/consul/api"
@@ -6,7 +6,7 @@ import (
 
 type ConsulControl struct {
 	Client *api.Client
-	Config * api.AgentServiceRegistration
+	Config *api.AgentServiceRegistration
 }
 
 func ConnConsul(addr string) (*ConsulControl, error) {
@@ -14,11 +14,11 @@ func ConnConsul(addr string) (*ConsulControl, error) {
 	config := api.DefaultConfig()
 	config.Address = addr
 	var err error
-	csc.Client,err = api.NewClient(config)
-	return csc,err
+	csc.Client, err = api.NewClient(config)
+	return csc, err
 }
 
-func (c *ConsulControl) Register (config *api.AgentServiceRegistration) error {
+func (c *ConsulControl) Register(config *api.AgentServiceRegistration) error {
 	c.Config = config
 
 	var err error
@@ -28,7 +28,7 @@ func (c *ConsulControl) Register (config *api.AgentServiceRegistration) error {
 	return nil
 }
 
-func (c *ConsulControl) UnRegister (serviceId string) error {
+func (c *ConsulControl) UnRegister(serviceId string) error {
 	var err error
 	if err = c.Client.Agent().ServiceDeregister(serviceId); err != nil {
 		return err
