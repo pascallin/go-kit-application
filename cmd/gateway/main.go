@@ -28,7 +28,6 @@ import (
 	"github.com/pascallin/go-kit-application/internal/addsvc/addendpoint"
 	"github.com/pascallin/go-kit-application/internal/addsvc/addservice"
 	"github.com/pascallin/go-kit-application/internal/addsvc/addtransport"
-	"github.com/pascallin/go-kit-application/internal/stringsvc"
 )
 
 func main() {
@@ -122,34 +121,6 @@ func main() {
 		r.PathPrefix("/addsvc/grpc").Handler(http.StripPrefix("/addsvc/grpc", addtransport.NewHTTPHandler(endpoints, logger, tracer, zipkinTracer)))
 	}
 
-	// stringsvc routes
-	{
-		var (
-			tags        = []string{}
-			passingOnly = true
-			uppercase   endpoint.Endpoint
-			count       endpoint.Endpoint
-			instancer   = consulsd.NewInstancer(client, logger, "addstring", tags, passingOnly)
-		)
-		{
-			factory := stringsvcFactory(ctx, "POST", "/uppercase")
-			endpointer := sd.NewEndpointer(instancer, factory, logger)
-			balancer := lb.NewRoundRobin(endpointer)
-			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
-			uppercase = retry
-		}
-		{
-			factory := stringsvcFactory(ctx, "POST", "/count")
-			endpointer := sd.NewEndpointer(instancer, factory, logger)
-			balancer := lb.NewRoundRobin(endpointer)
-			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
-			count = retry
-		}
-
-		r.Handle("/stringsvc/uppercase", httptransport.NewServer(uppercase, stringsvc.DecodeUppercaseRequest, stringsvc.EncodeResponse))
-		r.Handle("/stringsvc/count", httptransport.NewServer(count, stringsvc.DecodeUppercaseRequest, stringsvc.EncodeResponse))
-	}
-
 	// Interrupt handler.
 	errc := make(chan error)
 	go func() {
@@ -205,33 +176,5 @@ func addsvcGRPCFactory(makeEndpoint func(service addservice.AddService) endpoint
 		service := addtransport.NewGRPCClient(conn, tracer, zipkinTracer, logger)
 		endpoint := makeEndpoint(service)
 		return endpoint, conn, nil
-	}
-}
-
-func stringsvcFactory(ctx context.Context, method, path string) sd.Factory {
-	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
-		if !strings.HasPrefix(instance, "http") {
-			instance = "http://" + instance
-		}
-		tgt, err := url.Parse(instance)
-		if err != nil {
-			return nil, nil, err
-		}
-		tgt.Path = path
-
-		var (
-			enc httptransport.EncodeRequestFunc
-			dec httptransport.DecodeResponseFunc
-		)
-		switch path {
-		case "/uppercase":
-			enc, dec = stringsvc.EncodeRequest, stringsvc.DecodeUppercaseResponse
-		case "/count":
-			enc, dec = stringsvc.EncodeRequest, stringsvc.DecodeCountResponse
-		default:
-			return nil, nil, fmt.Errorf("unknown stringsvc path %q", path)
-		}
-
-		return httptransport.NewClient(method, tgt, enc, dec).Endpoint(), nil, nil
 	}
 }
