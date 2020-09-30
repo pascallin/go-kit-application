@@ -1,4 +1,4 @@
-# go-micro-services
+# go-git-application
 
 A micro-services demo base on go-kit examples
 
@@ -6,7 +6,7 @@ A micro-services demo base on go-kit examples
 
 1. download dependent packages
 
-```
+``` 
 go mod download
 ```
 
@@ -14,7 +14,7 @@ go mod download
 
 there are some `docker-compose` files in my other github repository([go to reference](https://github.com/pascallin/devops))
 
-```
+``` 
 git clone https://github.com/pascallin/devops.git
 
 cd ./zipkin
