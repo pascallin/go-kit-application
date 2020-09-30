@@ -20,7 +20,7 @@ func (mw instrumentingMiddleware) Uppercase(s string) (output string, err error)
 		mw.requestLatency.With(lvs...).Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	output, err = mw.next.Uppercase(s)
+	output, err = Uppercase(s)
 	return
 }
 
@@ -32,6 +32,6 @@ func (mw instrumentingMiddleware) Count(s string) (n int) {
 		mw.countResult.Observe(float64(n))
 	}(time.Now())
 
-	n = mw.next.Count(s)
+	n = Count(s)
 	return
 }

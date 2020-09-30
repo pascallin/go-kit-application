@@ -73,7 +73,7 @@ type proxymw struct {
 }
 
 func (mw proxymw) Count(s string) int {
-	return mw.next.Count(s)
+	return Count(s)
 }
 
 func (mw proxymw) Uppercase(s string) (string, error) {
