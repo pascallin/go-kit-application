@@ -1,3 +1,6 @@
+[![Go Report Card](https://goreportcard.com/report/github.com/pascallin/go-kit-application)](https://goreportcard.com/report/github.com/pascallin/go-kit-application)
+[![Go Reference](https://pkg.go.dev/badge/github.com/pascallin/go-kit-application.svg)](https://pkg.go.dev/github.com/pascallin/go-kit-application)
+
 # go-git-application
 
 A micro-services demo base on go-kit examples
@@ -27,7 +30,9 @@ docker-compose up -d
 3. run commands
 
 ```shell script
-go run ./cmd/addsvc/main.go
-go run ./cmd/stringsvc/main.go
-go run ./cmd/gateway/main.go
+# for development
+air
+
+go build -o go-kit-application
+go-kit-application
 ```
