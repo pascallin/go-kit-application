@@ -1,4 +1,4 @@
-package main
+package gateway
 
 import (
 	"context"
@@ -25,12 +25,12 @@ import (
 	stdzipkin "github.com/openzipkin/zipkin-go"
 	"google.golang.org/grpc"
 
-	"github.com/pascallin/go-kit-application/internal/addsvc/addendpoint"
-	"github.com/pascallin/go-kit-application/internal/addsvc/addservice"
-	"github.com/pascallin/go-kit-application/internal/addsvc/addtransport"
+	"github.com/pascallin/go-kit-application/addsvc/addendpoint"
+	"github.com/pascallin/go-kit-application/addsvc/addservice"
+	"github.com/pascallin/go-kit-application/addsvc/addtransport"
 )
 
-func main() {
+func StartGateway() {
 	var (
 		httpAddr     = flag.String("http.addr", ":8000", "Address for HTTP (JSON) server")
 		consulAddr   = flag.String("consul.addr", ":8500", "Consul agent address")
@@ -129,14 +129,15 @@ func main() {
 		errc <- fmt.Errorf("%s", <-c)
 	}()
 
-	// HTTP strtransport.
+	// HTTP addtransport.
 	go func() {
-		logger.Log("strtransport", "HTTP", "addr", *httpAddr)
+		logger.Log("gateway server running...")
+		logger.Log("addtransport", "HTTP", "addr", *httpAddr)
 		errc <- http.ListenAndServe(*httpAddr, r)
 	}()
 
 	// Run!
-	logger.Log("exit", <-errc)
+	logger.Log("gateway server exit", <-errc)
 }
 
 func addsvcFactory(ctx context.Context, method, path string) sd.Factory {

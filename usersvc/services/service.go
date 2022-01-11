@@ -1,4 +1,4 @@
-package usersvc
+package services
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
-	"github.com/pascallin/go-kit-application/internal/pkg/db"
+	"github.com/pascallin/go-kit-application/conn"
 )
 
 type User struct {
@@ -53,7 +53,7 @@ func login(username string, password string) (err error, token string) {
 	return nil, tokenString
 }
 
-func register(username, password, nickname string) (error, primitive.ObjectID) {
+func Register(username, password, nickname string) (error, primitive.ObjectID) {
 	_, existUser := findUserByUserName(username)
 	fmt.Println(existUser)
 	if existUser != nil {

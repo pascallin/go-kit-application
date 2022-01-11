@@ -19,8 +19,8 @@ import (
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 
-	addendpoint "github.com/pascallin/go-kit-application/internal/addsvc/addendpoint"
-	"github.com/pascallin/go-kit-application/internal/addsvc/addservice"
+	addendpoint "github.com/pascallin/go-kit-application/addsvc/addendpoint"
+	"github.com/pascallin/go-kit-application/addsvc/addservice"
 	"github.com/pascallin/go-kit-application/pb"
 )
 

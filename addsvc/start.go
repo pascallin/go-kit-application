@@ -19,12 +19,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 
-	addendpoint "github.com/pascallin/go-kit-application/internal/addsvc/addendpoint"
-	addservice "github.com/pascallin/go-kit-application/internal/addsvc/addservice"
-	addtransport "github.com/pascallin/go-kit-application/internal/addsvc/addtransport"
-	"github.com/pascallin/go-kit-application/internal/pkg/discovery"
-	"github.com/pascallin/go-kit-application/internal/pkg/tracer"
+	addendpoint "github.com/pascallin/go-kit-application/addsvc/addendpoint"
+	addservice "github.com/pascallin/go-kit-application/addsvc/addservice"
+	addtransport "github.com/pascallin/go-kit-application/addsvc/addtransport"
+	"github.com/pascallin/go-kit-application/discovery"
 	addpb "github.com/pascallin/go-kit-application/pb"
+	"github.com/pascallin/go-kit-application/tracer"
 )
 
 func StartAddSVCService() {
@@ -52,16 +52,17 @@ func StartAddSVCService() {
 	// Create the (sparse) metrics we'll use in the service. They, too, are
 	// dependencies that we pass to components that use them.
 	var ints, chars metrics.Counter
+	var metricsNamespace = "go_kit_service"
 	{
 		// Business-level metrics.
 		ints = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
-			Namespace: "example",
+			Namespace: metricsNamespace,
 			Subsystem: "addsvc",
 			Name:      "integers_summed",
 			Help:      "Total count of integers summed via the Sum method.",
 		}, []string{})
 		chars = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
-			Namespace: "example",
+			Namespace: metricsNamespace,
 			Subsystem: "addsvc",
 			Name:      "characters_concatenated",
 			Help:      "Total count of characters concatenated via the Concat method.",
@@ -71,7 +72,7 @@ func StartAddSVCService() {
 	{
 		// Endpoint-level metrics.
 		duration = prometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
-			Namespace: "example",
+			Namespace: metricsNamespace,
 			Subsystem: "addsvc",
 			Name:      "request_duration_seconds",
 			Help:      "Request duration in seconds.",

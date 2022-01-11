@@ -16,7 +16,7 @@ import (
 	"github.com/sony/gobreaker"
 	"golang.org/x/time/rate"
 
-	"github.com/pascallin/go-kit-application/internal/addsvc/addservice"
+	"github.com/pascallin/go-kit-application/addsvc/addservice"
 )
 
 type Set struct {

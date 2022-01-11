@@ -1,9 +1,10 @@
-package usersvc
+package endpoints
 
 import (
 	"context"
 
 	"github.com/go-kit/kit/endpoint"
+	"github.com/pascallin/go-kit-application/usersvc/services"
 )
 
 type EndpointSet struct {
@@ -31,7 +32,7 @@ type RegisterResponse struct {
 func makeRegisterEndpoint() endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(RegisterRequest)
-		err, id := register(req.Username, req.Password, req.Nickname)
+		err, id := services.Register(req.Username, req.Password, req.Nickname)
 		return RegisterResponse{Id: id.String(), Err: err}, nil
 	}
 }

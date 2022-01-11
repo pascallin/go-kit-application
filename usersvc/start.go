@@ -1,4 +1,4 @@
-package main
+package usersvc
 
 import (
 	"fmt"
@@ -13,13 +13,13 @@ import (
 	"github.com/oklog/oklog/pkg/group"
 	"google.golang.org/grpc"
 
-	"github.com/pascallin/go-kit-application/internal/pkg/db"
-	"github.com/pascallin/go-kit-application/internal/usersvc"
-	"github.com/pascallin/go-kit-application/internal/usersvc/transports"
+	"github.com/pascallin/go-kit-application/conn"
 	"github.com/pascallin/go-kit-application/pb"
+	"github.com/pascallin/go-kit-application/usersvc/endpoints"
+	"github.com/pascallin/go-kit-application/usersvc/transports"
 )
 
-func main() {
+func StartUserSVCService() {
 	godotenv.Load()
 
 	// connect mongodb
@@ -43,7 +43,7 @@ func main() {
 	}
 
 	var (
-		endpoints  = usersvc.New()
+		endpoints  = endpoints.New()
 		grpcServer = transports.NewGRPCServer(endpoints, logger)
 	)
 

@@ -7,8 +7,8 @@ import (
 	"github.com/go-kit/kit/transport"
 	"github.com/go-kit/kit/transport/grpc"
 
-	"github.com/pascallin/go-kit-application/internal/usersvc"
 	"github.com/pascallin/go-kit-application/pb"
+	"github.com/pascallin/go-kit-application/usersvc/endpoints"
 )
 
 type grpcServer struct {
@@ -23,7 +23,7 @@ func (s *grpcServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb
 	return rep.(*pb.RegisterResponse), nil
 }
 
-func NewGRPCServer(endpoints usersvc.EndpointSet, logger log.Logger) pb.UserServer {
+func NewGRPCServer(endpoints endpoints.EndpointSet, logger log.Logger) pb.UserServer {
 	options := []grpc.ServerOption{
 		grpc.ServerErrorHandler(transport.NewLogErrorHandler(logger)),
 	}
@@ -39,7 +39,7 @@ func NewGRPCServer(endpoints usersvc.EndpointSet, logger log.Logger) pb.UserServ
 
 func decodeGRPCRegisterRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(*pb.RegisterRequest)
-	return usersvc.RegisterRequest{
+	return endpoints.RegisterRequest{
 		Username: req.Username,
 		Password: req.Password,
 		Nickname: req.Nickname,
@@ -47,6 +47,6 @@ func decodeGRPCRegisterRequest(_ context.Context, grpcReq interface{}) (interfac
 }
 
 func encodeGRPCRegisterResponse(_ context.Context, response interface{}) (interface{}, error) {
-	res := response.(usersvc.RegisterResponse)
+	res := response.(endpoints.RegisterResponse)
 	return &pb.RegisterResponse{Err: res.Err.Error(), Id: res.Id}, nil
 }
