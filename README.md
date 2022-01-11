@@ -1,4 +1,4 @@
-[![Go Report Card](https://goreportcard.com/report/github.com/pascallin/go-kit-application)](https://goreportcard.com/report/github.com/pascallin/go-kit-application)
+[![Go Report Card](https://goreportcard.com/badge/github.com/pascallin/go-kit-application)](https://goreportcard.com/report/github.com/pascallin/go-kit-application)
 [![Go Reference](https://pkg.go.dev/badge/github.com/pascallin/go-kit-application.svg)](https://pkg.go.dev/github.com/pascallin/go-kit-application)
 
 # go-git-application
