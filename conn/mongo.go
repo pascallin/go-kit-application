@@ -13,7 +13,7 @@ import (
 
 const (
 	// Timeout operations after N seconds
-	connectTimeout           = 5
+	connectTimeout          = 5
 	mongoConnStringTemplate = "mongodb://%s:%s@%s"
 )
 
