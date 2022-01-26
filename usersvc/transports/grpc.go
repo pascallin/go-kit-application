@@ -2,6 +2,7 @@ package transports
 
 import (
 	"context"
+	"errors"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/transport"
@@ -13,6 +14,7 @@ import (
 
 type grpcServer struct {
 	register grpc.Handler
+	pb.UnimplementedUserServer
 }
 
 func (s *grpcServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
@@ -48,5 +50,19 @@ func decodeGRPCRegisterRequest(_ context.Context, grpcReq interface{}) (interfac
 
 func encodeGRPCRegisterResponse(_ context.Context, response interface{}) (interface{}, error) {
 	res := response.(endpoints.RegisterResponse)
-	return &pb.RegisterResponse{Err: res.Err.Error(), Id: res.Id}, nil
+	return &pb.RegisterResponse{Id: res.Id, Err: err2str(res.Err)}, nil
+}
+
+func str2err(s string) error {
+	if s == "" {
+		return nil
+	}
+	return errors.New(s)
+}
+
+func err2str(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
 }

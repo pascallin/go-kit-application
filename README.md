@@ -5,19 +5,50 @@
 
 A micro-services demo base on go-kit examples
 
-## run
+## Project structure
 
-1. download dependent packages
+### Code structure
 
-``` 
+```shell
+gateway
+|
+go-kit transport(http & grpc)
+|
+go-kit endpoint
+|
+go-kit service
+```
+
+### Using go-kit sd package
+
+- `consul` for discovery
+
+## Run
+
+### Grpc prepare
+
+```shell
+versions:
+protoc-3.19.3
+protoc-gen-go@v1.26
+protoc-gen-go-grpc@v1.1
+```
+
+reference: https://grpc.io/docs/languages/go/quickstart/
+
+### Dependent packages
+
+```shell
 go mod download
 ```
 
-2. consul & zipkin
+### Infrastructure services
+
+needed consul & zipkin
 
 there are some `docker-compose` files in my other github repository([go to reference](https://github.com/pascallin/devops))
 
-``` 
+```shell
 git clone https://github.com/pascallin/devops.git
 
 cd ./zipkin
@@ -27,12 +58,16 @@ cd ./consul
 docker-compose up -d
 ```
 
-3. run commands
+### Development
 
-```shell script
-# for development
-air
+All commands stay in `[service]/cmd` folder, we using [air](https://github.com/cosmtrek/air) as live reload tools.
 
-go build -o go-kit-application
-go-kit-application
+```shell
+cd addsvc && air
 ```
+
+## TODO list
+
+- Prometheus
+- Dockerfile
+- CI/CD

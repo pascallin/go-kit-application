@@ -1,14 +1,3 @@
 #!/usr/bin/env sh
 
-# Install proto3 from source
-#  brew install autoconf automake libtool
-#  git clone https://github.com/google/protobuf
-#  ./autogen.sh ; ./configure ; make ; make install
-#
-# Update protoc Go bindings via
-#  go get -u github.com/golang/protobuf/{proto,protoc-gen-go}
-#
-# See also
-#  https://github.com/grpc/grpc-go/tree/master/examples
-
-protoc ./protos/*.proto --proto_path=./protos --go_out=plugins=grpc:.
+protoc ./*.proto --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative

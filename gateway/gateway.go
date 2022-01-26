@@ -25,9 +25,8 @@ import (
 	stdzipkin "github.com/openzipkin/zipkin-go"
 	"google.golang.org/grpc"
 
-	"github.com/pascallin/go-kit-application/addsvc/addendpoint"
-	"github.com/pascallin/go-kit-application/addsvc/addservice"
-	"github.com/pascallin/go-kit-application/addsvc/addtransport"
+	"github.com/pascallin/go-kit-application/addsvc"
+	addtransport "github.com/pascallin/go-kit-application/addsvc/transports"
 )
 
 func StartGateway() {
@@ -100,25 +99,25 @@ func StartGateway() {
 		var (
 			tags        = []string{}
 			passingOnly = true
-			endpoints   = addendpoint.Set{}
+			endpoints   = addsvc.Set{}
 			instancer   = consulsd.NewInstancer(client, logger, "addsvc_grpc", tags, passingOnly)
 		)
 		{
-			factory := addsvcGRPCFactory(addendpoint.MakeSumEndpoint, tracer, zipkinTracer, logger)
+			factory := addsvcGRPCFactory(addsvc.MakeSumEndpoint, tracer, zipkinTracer, logger)
 			endpointer := sd.NewEndpointer(instancer, factory, logger)
 			balancer := lb.NewRoundRobin(endpointer)
 			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
 			endpoints.SumEndpoint = retry
 		}
 		{
-			factory := addsvcGRPCFactory(addendpoint.MakeConcatEndpoint, tracer, zipkinTracer, logger)
+			factory := addsvcGRPCFactory(addsvc.MakeConcatEndpoint, tracer, zipkinTracer, logger)
 			endpointer := sd.NewEndpointer(instancer, factory, logger)
 			balancer := lb.NewRoundRobin(endpointer)
 			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
 			endpoints.ConcatEndpoint = retry
 		}
 
-		r.PathPrefix("/addsvc/grpc").Handler(http.StripPrefix("/addsvc/grpc", addtransport.NewHTTPHandler(endpoints, logger, tracer, zipkinTracer)))
+		r.PathPrefix("/addsvc/grpc").Handler(http.StripPrefix("/addsvc/grpc", addtransport.NewHTTPHandler(endpoints, tracer, zipkinTracer, logger)))
 	}
 
 	// Interrupt handler.
@@ -131,8 +130,7 @@ func StartGateway() {
 
 	// HTTP addtransport.
 	go func() {
-		logger.Log("gateway server running...")
-		logger.Log("addtransport", "HTTP", "addr", *httpAddr)
+		logger.Log("gateway", "HTTP", "addr", *httpAddr)
 		errc <- http.ListenAndServe(*httpAddr, r)
 	}()
 
@@ -168,7 +166,7 @@ func addsvcFactory(ctx context.Context, method, path string) sd.Factory {
 	}
 }
 
-func addsvcGRPCFactory(makeEndpoint func(service addservice.AddService) endpoint.Endpoint, tracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, logger log.Logger) sd.Factory {
+func addsvcGRPCFactory(makeEndpoint func(service addsvc.Service) endpoint.Endpoint, tracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, logger log.Logger) sd.Factory {
 	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
 		conn, err := grpc.Dial(instance, grpc.WithInsecure())
 		if err != nil {

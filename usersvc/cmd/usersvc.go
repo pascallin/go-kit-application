@@ -1,4 +1,4 @@
-package usersvc
+package main
 
 import (
 	"fmt"
@@ -19,7 +19,7 @@ import (
 	"github.com/pascallin/go-kit-application/usersvc/transports"
 )
 
-func StartUserSVCService() {
+func main() {
 	godotenv.Load()
 
 	// connect mongodb

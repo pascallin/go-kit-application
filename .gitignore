@@ -12,10 +12,11 @@
 *.out
 
 # Dependency directories (remove the comment below to include it)
-# vendor/
+vendor/
 
 # ide
 .idea
 
-
 docker-infrastructure/*
+
+**/tmp

@@ -1,4 +1,4 @@
-package tracer
+package tracing
 
 import (
 	"os"
