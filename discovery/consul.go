@@ -3,12 +3,11 @@ package discovery
 import (
 	"fmt"
 	"log"
-	"strconv"
 	"sync"
 
 	consulsd "github.com/go-kit/kit/sd/consul"
 	consulapi "github.com/hashicorp/consul/api"
-	"github.com/hashicorp/consul/api/watch"
+	watch "github.com/hashicorp/consul/api/watch"
 )
 
 type KitDiscoverClient struct {
@@ -24,11 +23,10 @@ type ServiceInstance struct {
 	InstancePort int
 }
 
-func NewKitDiscoverClient(addr string) (client *KitDiscoverClient, err error) {
+func NewKitDiscoverClient() (client *KitDiscoverClient, err error) {
 	c := new(KitDiscoverClient)
 	config := consulapi.DefaultConfig()
-	config.Address = addr
-	apiClient, err := consulapi.NewClient(config)
+	apiClient, err := consulapi.NewClient(consulapi.DefaultConfig())
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +35,7 @@ func NewKitDiscoverClient(addr string) (client *KitDiscoverClient, err error) {
 	return c, err
 }
 
-func (c *KitDiscoverClient) Register(name string, instance ServiceInstance, healthCheckUrl string, meta map[string]string) bool {
+func (c *KitDiscoverClient) Register(name string, instance ServiceInstance, meta map[string]string) bool {
 	serviceRegistration := &consulapi.AgentServiceRegistration{
 		ID:      instance.InstanceId,
 		Name:    name,
@@ -46,13 +44,14 @@ func (c *KitDiscoverClient) Register(name string, instance ServiceInstance, heal
 		Meta:    meta,
 		Check: &consulapi.AgentServiceCheck{
 			DeregisterCriticalServiceAfter: "30s",
-			HTTP:                           fmt.Sprintf("http://%s:%s/%s", instance.InstanceHost, strconv.Itoa(instance.InstancePort), healthCheckUrl),
+			GRPC:                           fmt.Sprintf("%s:%d", instance.InstanceHost, instance.InstancePort),
 			Interval:                       "15s",
 		},
 	}
 	err := c.client.Register(serviceRegistration)
 	if err != nil {
 		log.Println("Register Service Error!")
+		log.Panicln(err)
 		return false
 	}
 	log.Println("Register Service Success!")
@@ -122,7 +121,7 @@ func (c *KitDiscoverClient) DiscoveryServices(serviceName string) []interface{} 
 		plan.Run(c.config.Address)
 	}()
 
-	// get entries from etcd
+	// get entries from consul
 	entries, _, err := c.client.Service(serviceName, "", false, nil)
 	if err != nil {
 		c.instanceMap.Store(serviceName, []interface{}{})

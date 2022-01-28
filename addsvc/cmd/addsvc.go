@@ -4,21 +4,24 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 
-	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/prometheus"
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
+	"github.com/go-kit/log"
 	"github.com/joho/godotenv"
 	"github.com/oklog/oklog/pkg/group"
 	"github.com/pascallin/go-kit-application/addsvc"
 	addtransport "github.com/pascallin/go-kit-application/addsvc/transports"
+	"github.com/pascallin/go-kit-application/discovery"
 
 	"github.com/pascallin/go-kit-application/pb"
 	"github.com/pascallin/go-kit-application/tracing"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
 func main() {
@@ -84,10 +87,23 @@ func main() {
 		}
 		g.Add(func() error {
 			logger.Log("transport", "gRPC", "addr", grpcAddr)
-			// we add the Go Kit gRPC Interceptor to our gRPC service as it is used by
-			// the here demonstrated zipkin tracing middleware.
 			baseServer := grpc.NewServer(grpc.UnaryInterceptor(kitgrpc.Interceptor))
+			// register service
 			pb.RegisterAddServer(baseServer, grpcServer)
+			// heath check register
+			grpc_health_v1.RegisterHealthServer(baseServer, addsvc.NewHealthChecker())
+
+			client, err := discovery.NewKitDiscoverClient()
+			if err != nil {
+				panic(err)
+			}
+			port, err := strconv.Atoi(os.Getenv("ADD_SVC_GRPC_PORT"))
+			if err != nil {
+				panic(err)
+			}
+			status := client.Register("addsvc", discovery.ServiceInstance{InstanceId: "addsvc", InstanceHost: os.Getenv("SERVICE_HOST"), InstancePort: port}, make(map[string]string))
+			logger.Log("consul discovery register ", status)
+
 			return baseServer.Serve(grpcListener)
 		}, func(error) {
 			grpcListener.Close()
