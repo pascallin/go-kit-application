@@ -10,8 +10,6 @@ service Add {
 
   // Concatenates two strings
   rpc Concat (ConcatRequest) returns (ConcatReply) {}
-
-  rpc HealthCheck (HealthCheckRequest) returns (HealthCheckReply) {}
 }
 
 // The sum request contains two parameters.
@@ -36,11 +34,4 @@ message ConcatRequest {
 message ConcatReply {
   string v = 1;
   string err = 2;
-}
-
-message HealthCheckRequest {
-}
-
-message HealthCheckReply {
-  bool status = 1;
 }
