@@ -6,8 +6,11 @@ import (
 
 	"golang.org/x/time/rate"
 
+	"github.com/go-kit/kit/tracing/opentracing"
+	"github.com/go-kit/kit/tracing/zipkin"
 	stdopentracing "github.com/opentracing/opentracing-go"
 	stdzipkin "github.com/openzipkin/zipkin-go"
+
 	// "github.com/sony/gobreaker"
 
 	// "github.com/go-kit/kit/circuitbreaker"
@@ -38,10 +41,10 @@ func NewEndpoints(svc Service, logger log.Logger, duration metrics.Histogram, ot
 		// Note, rate is defined as a time interval between requests.
 		sumEndpoint = ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Every(time.Second), 1))(sumEndpoint)
 		// sumEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(sumEndpoint)
-		// sumEndpoint = opentracing.TraceServer(otTracer, "Sum")(sumEndpoint)
-		// if zipkinTracer != nil {
-		// 	sumEndpoint = zipkin.TraceEndpoint(zipkinTracer, "Sum")(sumEndpoint)
-		// }
+		sumEndpoint = opentracing.TraceServer(otTracer, "Sum")(sumEndpoint)
+		if zipkinTracer != nil {
+			sumEndpoint = zipkin.TraceEndpoint(zipkinTracer, "Sum")(sumEndpoint)
+		}
 		// sumEndpoint = LoggingMiddleware(log.With(logger, "method", "Sum"))(sumEndpoint)
 		// sumEndpoint = InstrumentingMiddleware(duration.With("method", "Sum"))(sumEndpoint)
 	}
@@ -52,10 +55,10 @@ func NewEndpoints(svc Service, logger log.Logger, duration metrics.Histogram, ot
 		// Note, rate is defined as a number of requests per second.
 		concatEndpoint = ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Limit(1), 100))(concatEndpoint)
 		// concatEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(concatEndpoint)
-		// concatEndpoint = opentracing.TraceServer(otTracer, "Concat")(concatEndpoint)
-		// if zipkinTracer != nil {
-		// 	concatEndpoint = zipkin.TraceEndpoint(zipkinTracer, "Concat")(concatEndpoint)
-		// }
+		concatEndpoint = opentracing.TraceServer(otTracer, "Concat")(concatEndpoint)
+		if zipkinTracer != nil {
+			concatEndpoint = zipkin.TraceEndpoint(zipkinTracer, "Concat")(concatEndpoint)
+		}
 		// concatEndpoint = LoggingMiddleware(log.With(logger, "method", "Concat"))(concatEndpoint)
 		// concatEndpoint = InstrumentingMiddleware(duration.With("method", "Concat"))(concatEndpoint)
 	}

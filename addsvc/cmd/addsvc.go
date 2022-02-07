@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"net"
 	"net/http"
 	"os"
@@ -12,12 +13,14 @@ import (
 	"github.com/go-kit/log"
 	"github.com/joho/godotenv"
 	"github.com/oklog/oklog/pkg/group"
+	stdopentracing "github.com/opentracing/opentracing-go"
+	zipkinot "github.com/openzipkin-contrib/zipkin-go-opentracing"
+	zipkin "github.com/openzipkin/zipkin-go"
+	zipkinhttp "github.com/openzipkin/zipkin-go/reporter/http"
 	"github.com/pascallin/go-kit-application/addsvc"
 	addtransport "github.com/pascallin/go-kit-application/addsvc/transports"
 	"github.com/pascallin/go-kit-application/discovery"
-
 	"github.com/pascallin/go-kit-application/pb"
-	"github.com/pascallin/go-kit-application/tracing"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
@@ -63,15 +66,51 @@ func main() {
 	}
 	http.DefaultServeMux.Handle("/metrics", promhttp.Handler())
 
-	zipkinTracer, octracer, err := tracing.NewOpentracingTracer("localhost:80", "addsvc")
-	if err != nil {
-		panic(err)
+	fs := flag.NewFlagSet("addsvc", flag.ExitOnError)
+	var (
+		zipkinURL    = fs.String("zipkin-url", "http://localhost:9411/api/v2/spans", "Enable Zipkin tracing via HTTP reporter URL e.g. http://localhost:9411/api/v2/spans")
+		zipkinBridge = fs.Bool("zipkin-ot-bridge", true, "Use Zipkin OpenTracing bridge instead of native implementation")
+	)
+
+	var zipkinTracer *zipkin.Tracer
+	{
+		if *zipkinURL != "" {
+			var (
+				err         error
+				hostPort    = "localhost:80"
+				serviceName = "addsvc"
+				reporter    = zipkinhttp.NewReporter(*zipkinURL)
+			)
+			defer reporter.Close()
+			zEP, _ := zipkin.NewEndpoint(serviceName, hostPort)
+			zipkinTracer, err = zipkin.NewTracer(reporter, zipkin.WithLocalEndpoint(zEP))
+			if err != nil {
+				logger.Log("err", err)
+				os.Exit(1)
+			}
+			if !(*zipkinBridge) {
+				logger.Log("tracer", "Zipkin", "type", "Native", "URL", *zipkinURL)
+			}
+		}
+	}
+
+	// Determine which OpenTracing tracer to use. We'll pass the tracer to all the
+	// components that use it, as a dependency.
+	var tracer stdopentracing.Tracer
+	{
+		if *zipkinBridge && zipkinTracer != nil {
+			logger.Log("tracer", "Zipkin", "type", "OpenTracing", "URL", *zipkinURL)
+			tracer = zipkinot.Wrap(zipkinTracer)
+			zipkinTracer = nil // do not instrument with both native tracer and opentracing bridge
+		} else {
+			tracer = stdopentracing.GlobalTracer() // no-op
+		}
 	}
 
 	var (
 		service    = addsvc.NewService(logger, ints, chars)
-		endpoints  = addsvc.NewEndpoints(service, logger, duration, octracer, zipkinTracer)
-		grpcServer = addtransport.NewGRPCServer(endpoints, octracer, zipkinTracer, logger)
+		endpoints  = addsvc.NewEndpoints(service, logger, duration, tracer, zipkinTracer)
+		grpcServer = addtransport.NewGRPCServer(endpoints, tracer, zipkinTracer, logger)
 	)
 
 	var (
