@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"net"
 	"net/http"
 	"os"
@@ -30,12 +29,14 @@ import (
 func main() {
 	godotenv.Load()
 
+	// global logger
 	var logger log.Logger
 	{
 		logger = log.NewLogfmtLogger(os.Stderr)
 		logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 		logger = log.With(logger, "caller", log.DefaultCaller)
 	}
+
 	// Create the (sparse) metrics we'll use in the service. They, too, are
 	// dependencies that we pass to components that use them.
 	var ints, chars metrics.Counter
@@ -66,20 +67,18 @@ func main() {
 	}
 	http.DefaultServeMux.Handle("/metrics", promhttp.Handler())
 
-	fs := flag.NewFlagSet("addsvc", flag.ExitOnError)
 	var (
-		zipkinURL    = fs.String("zipkin-url", "http://localhost:9411/api/v2/spans", "Enable Zipkin tracing via HTTP reporter URL e.g. http://localhost:9411/api/v2/spans")
-		zipkinBridge = fs.Bool("zipkin-ot-bridge", true, "Use Zipkin OpenTracing bridge instead of native implementation")
+		zipkinURL    = os.Getenv("DEFAULT_ZIPKIN_URL")
+		zipkinBridge = true
 	)
-
 	var zipkinTracer *zipkin.Tracer
 	{
-		if *zipkinURL != "" {
+		if zipkinURL != "" {
 			var (
 				err         error
 				hostPort    = "localhost:80"
 				serviceName = "addsvc"
-				reporter    = zipkinhttp.NewReporter(*zipkinURL)
+				reporter    = zipkinhttp.NewReporter(zipkinURL)
 			)
 			defer reporter.Close()
 			zEP, _ := zipkin.NewEndpoint(serviceName, hostPort)
@@ -88,18 +87,17 @@ func main() {
 				logger.Log("err", err)
 				os.Exit(1)
 			}
-			if !(*zipkinBridge) {
-				logger.Log("tracer", "Zipkin", "type", "Native", "URL", *zipkinURL)
+			if !(zipkinBridge) {
+				logger.Log("tracer", "Zipkin", "type", "Native", "URL", zipkinURL)
 			}
 		}
 	}
-
 	// Determine which OpenTracing tracer to use. We'll pass the tracer to all the
 	// components that use it, as a dependency.
 	var tracer stdopentracing.Tracer
 	{
-		if *zipkinBridge && zipkinTracer != nil {
-			logger.Log("tracer", "Zipkin", "type", "OpenTracing", "URL", *zipkinURL)
+		if zipkinBridge && zipkinTracer != nil {
+			logger.Log("tracer", "Zipkin", "type", "OpenTracing", "URL", zipkinURL)
 			tracer = zipkinot.Wrap(zipkinTracer)
 			zipkinTracer = nil // do not instrument with both native tracer and opentracing bridge
 		} else {
@@ -114,9 +112,26 @@ func main() {
 	)
 
 	var (
-		grpcAddr = ":" + os.Getenv("ADD_SVC_GRPC_PORT")
+		grpcAddr  = ":" + os.Getenv("ADD_SVC_GRPC_PORT")
+		debugAddr = ":" + os.Getenv("ADD_SVC_DEBUG_PORT")
 	)
 	var g group.Group
+	{
+		// The debug listener mounts the http.DefaultServeMux, and serves up
+		// stuff like the Prometheus metrics route, the Go debug and profiling
+		// routes, and so on.
+		debugListener, err := net.Listen("tcp", debugAddr)
+		if err != nil {
+			logger.Log("transport", "debug/HTTP", "during", "Listen", "err", err)
+			os.Exit(1)
+		}
+		g.Add(func() error {
+			logger.Log("transport", "debug/HTTP", "addr", debugAddr)
+			return http.Serve(debugListener, http.DefaultServeMux)
+		}, func(error) {
+			debugListener.Close()
+		})
+	}
 	{
 		// The gRPC listener mounts the Go kit gRPC server we created.
 		grpcListener, err := net.Listen("tcp", grpcAddr)
