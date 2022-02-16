@@ -18,8 +18,6 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/ratelimit"
-	// "github.com/go-kit/kit/tracing/opentracing"
-	// "github.com/go-kit/kit/tracing/zipkin"
 )
 
 // Set collects all of the endpoints that compose an add service. It's meant to

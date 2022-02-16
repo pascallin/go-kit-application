@@ -16,14 +16,15 @@ import (
 	zipkinot "github.com/openzipkin-contrib/zipkin-go-opentracing"
 	zipkin "github.com/openzipkin/zipkin-go"
 	zipkinhttp "github.com/openzipkin/zipkin-go/reporter/http"
-	"github.com/pascallin/go-kit-application/addsvc"
-	addtransport "github.com/pascallin/go-kit-application/addsvc/transports"
-	"github.com/pascallin/go-kit-application/discovery"
-	"github.com/pascallin/go-kit-application/pb"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
+
+	"github.com/pascallin/go-kit-application/addsvc"
+	addtransport "github.com/pascallin/go-kit-application/addsvc/transports"
+	"github.com/pascallin/go-kit-application/discovery"
+	"github.com/pascallin/go-kit-application/pb"
 )
 
 func main() {
