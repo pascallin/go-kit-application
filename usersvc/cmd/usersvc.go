@@ -24,6 +24,7 @@ import (
 	"github.com/pascallin/go-kit-application/pb"
 	"github.com/pascallin/go-kit-application/usersvc"
 	"github.com/pascallin/go-kit-application/usersvc/endpoints"
+	"github.com/pascallin/go-kit-application/usersvc/services"
 	"github.com/pascallin/go-kit-application/usersvc/transports"
 )
 
@@ -91,7 +92,8 @@ func main() {
 	}
 
 	var (
-		endpoints  = endpoints.New(logger, tracer, zipkinTracer)
+		service    = services.NewService(logger)
+		endpoints  = endpoints.New(service, logger, tracer, zipkinTracer)
 		grpcServer = transports.NewGRPCServer(endpoints, logger)
 	)
 

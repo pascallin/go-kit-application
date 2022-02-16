@@ -8,14 +8,35 @@ import (
 	"os"
 	"time"
 
-	"go.mongodb.org/mongo-driver/mongo/options"
-
 	"github.com/dgrijalva/jwt-go"
+	"github.com/go-kit/kit/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/pascallin/go-kit-application/conn"
 )
+
+// Service describes a service that adds things together.
+type Service interface {
+	Register(ctx context.Context, username, password, nickname string) (error, primitive.ObjectID)
+}
+
+// New returns a basic Service with all of the expected middlewares wired in.
+func NewService(logger log.Logger) Service {
+	var svc Service
+	{
+		svc = NewUserService()
+		svc = LoggingMiddleware(logger)(svc)
+	}
+	return svc
+}
+
+type userService struct{}
+
+func NewUserService() Service {
+	return userService{}
+}
 
 type User struct {
 	Username string `bson:"username" json:"username"`
@@ -23,7 +44,7 @@ type User struct {
 	Password string `bson:"password" json:"password"`
 }
 
-func findUserByUserName(username string) (error, *User) {
+func (s userService) findUserByUserName(username string) (error, *User) {
 	user := &User{}
 	err := db.MongoDB.DB.Collection("users").
 		FindOne(context.Background(), bson.M{"username": username}).Decode(user)
@@ -33,8 +54,8 @@ func findUserByUserName(username string) (error, *User) {
 	return nil, user
 }
 
-func login(username string, password string) (err error, token string) {
-	err, user := findUserByUserName(username)
+func (s userService) login(username string, password string) (err error, token string) {
+	err, user := s.findUserByUserName(username)
 	if err != nil {
 		return err, ""
 	}
@@ -53,16 +74,16 @@ func login(username string, password string) (err error, token string) {
 	return nil, tokenString
 }
 
-func Register(username, password, nickname string) (error, primitive.ObjectID) {
-	_, existUser := findUserByUserName(username)
+func (s userService) Register(ctx context.Context, username, password, nickname string) (error, primitive.ObjectID) {
+	_, existUser := s.findUserByUserName(username)
 	fmt.Println(existUser)
 	if existUser != nil {
 		return errors.New("username existed"), primitive.NilObjectID
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	p := md5.Sum([]byte(password))
-	insertResult, err := db.MongoDB.DB.Collection("users").InsertOne(ctx, User{
+	insertResult, err := db.MongoDB.DB.Collection("users").InsertOne(dbCtx, User{
 		username,
 		nickname,
 		fmt.Sprintf("%x", p),
@@ -73,7 +94,7 @@ func Register(username, password, nickname string) (error, primitive.ObjectID) {
 	return nil, insertResult.InsertedID.(primitive.ObjectID)
 }
 
-func updatePassword(username, password, newPassword string) error {
+func (s userService) updatePassword(username, password, newPassword string) error {
 	var user User
 	p := md5.Sum([]byte(password))
 	matchUser := db.MongoDB.DB.Collection("users").
