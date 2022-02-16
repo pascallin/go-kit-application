@@ -4,6 +4,10 @@ import (
 	"context"
 
 	"github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/tracing/opentracing"
+	"github.com/go-kit/kit/tracing/zipkin"
+	stdopentracing "github.com/opentracing/opentracing-go"
+	stdzipkin "github.com/openzipkin/zipkin-go"
 	"github.com/pascallin/go-kit-application/usersvc/services"
 )
 
@@ -11,10 +15,14 @@ type EndpointSet struct {
 	RegisterEndpoint endpoint.Endpoint
 }
 
-func New() EndpointSet {
+func New(otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer) EndpointSet {
 	var registerEndpoint endpoint.Endpoint
 	{
 		registerEndpoint = makeRegisterEndpoint()
+		registerEndpoint = opentracing.TraceServer(otTracer, "Register")(registerEndpoint)
+		if zipkinTracer != nil {
+			registerEndpoint = zipkin.TraceEndpoint(zipkinTracer, "Register")(registerEndpoint)
+		}
 	}
 	return EndpointSet{
 		RegisterEndpoint: registerEndpoint,
