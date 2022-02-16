@@ -91,7 +91,7 @@ func main() {
 	}
 
 	var (
-		endpoints  = endpoints.New(tracer, zipkinTracer)
+		endpoints  = endpoints.New(logger, tracer, zipkinTracer)
 		grpcServer = transports.NewGRPCServer(endpoints, logger)
 	)
 
