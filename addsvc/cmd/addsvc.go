@@ -1,10 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/metrics/prometheus"
@@ -30,6 +33,15 @@ import (
 func main() {
 	godotenv.Load()
 
+	var (
+		grpcAddr  = ":" + os.Getenv("ADD_SVC_GRPC_PORT")
+		debugAddr = ":" + os.Getenv("ADD_SVC_DEBUG_PORT")
+		grpcPort  = os.Getenv("ADD_SVC_GRPC_PORT")
+		host      = os.Getenv("SERVICE_HOST")
+		instance  = os.Getenv("SERVICE_HOSTNAME")
+		svcName   = os.Getenv("SERVICE_NAME")
+	)
+
 	// global logger
 	var logger log.Logger
 	{
@@ -45,13 +57,13 @@ func main() {
 		// Business-level metrics.
 		ints = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
 			Namespace: "example",
-			Subsystem: "addsvc",
+			Subsystem: svcName,
 			Name:      "integers_summed",
 			Help:      "Total count of integers summed via the Sum method.",
 		}, []string{})
 		chars = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
 			Namespace: "example",
-			Subsystem: "addsvc",
+			Subsystem: svcName,
 			Name:      "characters_concatenated",
 			Help:      "Total count of characters concatenated via the Concat method.",
 		}, []string{})
@@ -61,7 +73,7 @@ func main() {
 		// Endpoint-level metrics.
 		duration = prometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
 			Namespace: "example",
-			Subsystem: "addsvc",
+			Subsystem: svcName,
 			Name:      "request_duration_seconds",
 			Help:      "Request duration in seconds.",
 		}, []string{"method", "success"})
@@ -78,7 +90,7 @@ func main() {
 			var (
 				err         error
 				hostPort    = "localhost:80"
-				serviceName = "addsvc"
+				serviceName = svcName
 				reporter    = zipkinhttp.NewReporter(zipkinURL)
 			)
 			defer reporter.Close()
@@ -112,10 +124,11 @@ func main() {
 		grpcServer = addtransport.NewGRPCServer(endpoints, tracer, zipkinTracer, logger)
 	)
 
-	var (
-		grpcAddr  = ":" + os.Getenv("ADD_SVC_GRPC_PORT")
-		debugAddr = ":" + os.Getenv("ADD_SVC_DEBUG_PORT")
-	)
+	client, err := discovery.NewKitDiscoverClient()
+	if err != nil {
+		panic(err)
+	}
+
 	var g group.Group
 	{
 		// The debug listener mounts the http.DefaultServeMux, and serves up
@@ -148,15 +161,11 @@ func main() {
 			// heath check register
 			grpc_health_v1.RegisterHealthServer(baseServer, addsvc.NewHealthChecker())
 
-			client, err := discovery.NewKitDiscoverClient()
+			port, err := strconv.Atoi(grpcPort)
 			if err != nil {
 				panic(err)
 			}
-			port, err := strconv.Atoi(os.Getenv("ADD_SVC_GRPC_PORT"))
-			if err != nil {
-				panic(err)
-			}
-			status := client.Register("addsvc", discovery.ServiceInstance{InstanceId: "addsvc", InstanceHost: os.Getenv("SERVICE_HOST"), InstancePort: port}, make(map[string]string))
+			status := client.Register(svcName, discovery.ServiceInstance{InstanceId: instance, InstanceHost: host, InstancePort: port}, make(map[string]string))
 			logger.Log("consul discovery register ", status)
 
 			return baseServer.Serve(grpcListener)
@@ -164,5 +173,23 @@ func main() {
 			grpcListener.Close()
 		})
 	}
+
+	{
+		cancelInterrupt := make(chan struct{})
+		g.Add(func() error {
+			c := make(chan os.Signal, 1)
+			signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+			select {
+			case sig := <-c:
+				client.DeRegister(instance)
+				return fmt.Errorf("received signal %s", sig)
+			case <-cancelInterrupt:
+				return nil
+			}
+		}, func(error) {
+			close(cancelInterrupt)
+		})
+	}
+
 	logger.Log("exit", g.Run())
 }

@@ -39,6 +39,10 @@ func main() {
 
 	var (
 		grpcAddr = ":" + os.Getenv("USER_SVC_RPC_PORT")
+		grpcPort = os.Getenv("USER_SVC_RPC_PORT")
+		host     = os.Getenv("SERVICE_HOST")
+		instance = os.Getenv("SERVICE_HOSTNAME")
+		svcName  = os.Getenv("SERVICE_NAME")
 	)
 
 	var logger log.Logger
@@ -58,7 +62,7 @@ func main() {
 			var (
 				err         error
 				hostPort    = "localhost:80"
-				serviceName = "usersvc"
+				serviceName = svcName
 				reporter    = zipkinhttp.NewReporter(zipkinURL)
 			)
 			defer reporter.Close()
@@ -91,6 +95,11 @@ func main() {
 		grpcServer = transports.NewGRPCServer(endpoints, logger)
 	)
 
+	client, err := discovery.NewKitDiscoverClient()
+	if err != nil {
+		panic(err)
+	}
+
 	var g group.Group
 	{
 		grpcListener, err := net.Listen("tcp", grpcAddr)
@@ -110,11 +119,11 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-			port, err := strconv.Atoi(os.Getenv("USER_SVC_RPC_PORT"))
+			port, err := strconv.Atoi(grpcPort)
 			if err != nil {
 				panic(err)
 			}
-			status := client.Register("usersvc", discovery.ServiceInstance{InstanceId: "addsvc", InstanceHost: os.Getenv("SERVICE_HOST"), InstancePort: port}, make(map[string]string))
+			status := client.Register(svcName, discovery.ServiceInstance{InstanceId: instance, InstanceHost: host, InstancePort: port}, make(map[string]string))
 			logger.Log("consul discovery register ", status)
 
 			return baseServer.Serve(grpcListener)
@@ -130,6 +139,7 @@ func main() {
 			signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 			select {
 			case sig := <-c:
+				client.DeRegister(instance)
 				return fmt.Errorf("received signal %s", sig)
 			case <-cancelInterrupt:
 				return nil
