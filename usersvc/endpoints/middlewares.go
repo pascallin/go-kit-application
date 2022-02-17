@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/log"
+	"github.com/go-kit/log"
 )
 
 // LoggingMiddleware returns an endpoint middleware that logs the
