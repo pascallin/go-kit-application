@@ -22,7 +22,6 @@ type AddClient interface {
 	Sum(ctx context.Context, in *SumRequest, opts ...grpc.CallOption) (*SumReply, error)
 	// Concatenates two strings
 	Concat(ctx context.Context, in *ConcatRequest, opts ...grpc.CallOption) (*ConcatReply, error)
-	HealthCheck(ctx context.Context, in *HealthCheckRequest, opts ...grpc.CallOption) (*HealthCheckReply, error)
 }
 
 type addClient struct {
@@ -51,15 +50,6 @@ func (c *addClient) Concat(ctx context.Context, in *ConcatRequest, opts ...grpc.
 	return out, nil
 }
 
-func (c *addClient) HealthCheck(ctx context.Context, in *HealthCheckRequest, opts ...grpc.CallOption) (*HealthCheckReply, error) {
-	out := new(HealthCheckReply)
-	err := c.cc.Invoke(ctx, "/pb.Add/HealthCheck", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // AddServer is the server API for Add service.
 // All implementations must embed UnimplementedAddServer
 // for forward compatibility
@@ -68,7 +58,6 @@ type AddServer interface {
 	Sum(context.Context, *SumRequest) (*SumReply, error)
 	// Concatenates two strings
 	Concat(context.Context, *ConcatRequest) (*ConcatReply, error)
-	HealthCheck(context.Context, *HealthCheckRequest) (*HealthCheckReply, error)
 	mustEmbedUnimplementedAddServer()
 }
 
@@ -81,9 +70,6 @@ func (UnimplementedAddServer) Sum(context.Context, *SumRequest) (*SumReply, erro
 }
 func (UnimplementedAddServer) Concat(context.Context, *ConcatRequest) (*ConcatReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Concat not implemented")
-}
-func (UnimplementedAddServer) HealthCheck(context.Context, *HealthCheckRequest) (*HealthCheckReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method HealthCheck not implemented")
 }
 func (UnimplementedAddServer) mustEmbedUnimplementedAddServer() {}
 
@@ -134,24 +120,6 @@ func _Add_Concat_Handler(srv interface{}, ctx context.Context, dec func(interfac
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Add_HealthCheck_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HealthCheckRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AddServer).HealthCheck(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.Add/HealthCheck",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AddServer).HealthCheck(ctx, req.(*HealthCheckRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // Add_ServiceDesc is the grpc.ServiceDesc for Add service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -166,10 +134,6 @@ var Add_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Concat",
 			Handler:    _Add_Concat_Handler,
-		},
-		{
-			MethodName: "HealthCheck",
-			Handler:    _Add_HealthCheck_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -17,9 +17,8 @@ import (
 )
 
 type grpcServer struct {
-	sum         grpctransport.Handler
-	concat      grpctransport.Handler
-	healthCheck grpctransport.Handler
+	sum    grpctransport.Handler
+	concat grpctransport.Handler
 	pb.UnimplementedAddServer
 }
 
@@ -55,12 +54,6 @@ func NewGRPCServer(endpoints addendpoints.Set, otTracer stdopentracing.Tracer, z
 			encodeGRPCConcatResponse,
 			append(options, grpctransport.ServerBefore(opentracing.GRPCToContext(otTracer, "Concat", logger)))...,
 		),
-		healthCheck: grpctransport.NewServer(
-			endpoints.HealthCheckEndpoint,
-			decodeGRPCHealthRequest,
-			encodeGRPCHealthResponse,
-			options...,
-		),
 	}
 }
 
@@ -79,14 +72,6 @@ func (s *grpcServer) Concat(ctx context.Context, req *pb.ConcatRequest) (*pb.Con
 		return nil, err
 	}
 	return rep.(*pb.ConcatReply), nil
-}
-
-func (s *grpcServer) HealthCheck(ctx context.Context, req *pb.HealthCheckRequest) (*pb.HealthCheckReply, error) {
-	_, rep, err := s.healthCheck.ServeGRPC(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	return rep.(*pb.HealthCheckReply), nil
 }
 
 // decodeGRPCSumRequest is a transport/grpc.DecodeRequestFunc that converts a
@@ -147,15 +132,6 @@ func encodeGRPCSumRequest(_ context.Context, request interface{}) (interface{}, 
 func encodeGRPCConcatRequest(_ context.Context, request interface{}) (interface{}, error) {
 	req := request.(addendpoints.ConcatRequest)
 	return &pb.ConcatRequest{A: req.A, B: req.B}, nil
-}
-
-func decodeGRPCHealthRequest(_ context.Context, request interface{}) (interface{}, error) {
-	// req := request.(addsvc.HealthRequest)
-	return &pb.HealthCheckRequest{}, nil
-}
-func encodeGRPCHealthResponse(_ context.Context, response interface{}) (interface{}, error) {
-	resp := response.(addendpoints.HealthResponse)
-	return &pb.HealthCheckReply{Status: resp.Status}, nil
 }
 
 // These annoying helper functions are required to translate Go error types to
