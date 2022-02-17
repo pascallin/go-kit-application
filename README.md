@@ -22,6 +22,7 @@ go-kit service
 ### Using go-kit sd package
 
 - `consul` for discovery
+- `zinkin` tracing
 
 ## Run
 
