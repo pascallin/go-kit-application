@@ -1,4 +1,4 @@
-package addsvc
+package services
 
 import (
 	"context"

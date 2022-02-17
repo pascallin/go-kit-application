@@ -9,22 +9,22 @@ import (
 	"net/http"
 	"net/url"
 
-	stdopentracing "github.com/opentracing/opentracing-go"
-	stdzipkin "github.com/openzipkin/zipkin-go"
-
+	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/tracing/opentracing"
 	"github.com/go-kit/kit/tracing/zipkin"
 	"github.com/go-kit/kit/transport"
 	httptransport "github.com/go-kit/kit/transport/http"
+	stdopentracing "github.com/opentracing/opentracing-go"
+	stdzipkin "github.com/openzipkin/zipkin-go"
 
-	"github.com/go-kit/kit/endpoint"
-	"github.com/pascallin/go-kit-application/addsvc"
+	addendpoints "github.com/pascallin/go-kit-application/addsvc/endpoints"
+	addservices "github.com/pascallin/go-kit-application/addsvc/services"
 )
 
 // NewHTTPHandler returns an HTTP handler that makes a set of endpoints
 // available on predefined paths.
-func NewHTTPHandler(endpoints addsvc.Set, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, logger log.Logger) http.Handler {
+func NewHTTPHandler(endpoints addendpoints.Set, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, logger log.Logger) http.Handler {
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorEncoder(errorEncoder),
 		httptransport.ServerErrorHandler(transport.NewLogErrorHandler(logger)),
@@ -74,7 +74,7 @@ func errorEncoder(_ context.Context, err error, w http.ResponseWriter) {
 
 func err2code(err error) int {
 	switch err {
-	case addsvc.ErrTwoZeroes, addsvc.ErrMaxSizeExceeded, addsvc.ErrIntOverflow:
+	case addservices.ErrTwoZeroes, addservices.ErrMaxSizeExceeded, addservices.ErrIntOverflow:
 		return http.StatusBadRequest
 	}
 	return http.StatusInternalServerError
@@ -96,7 +96,7 @@ type errorWrapper struct {
 // JSON-encoded sum request from the HTTP request body. Primarily useful in a
 // server.
 func DecodeHTTPSumRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req addsvc.SumRequest
+	var req addendpoints.SumRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	return req, err
 }
@@ -105,13 +105,13 @@ func DecodeHTTPSumRequest(_ context.Context, r *http.Request) (interface{}, erro
 // JSON-encoded concat request from the HTTP request body. Primarily useful in a
 // server.
 func DecodeHTTPConcatRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req addsvc.ConcatRequest
+	var req addendpoints.ConcatRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	return req, err
 }
 
 func DecodeHealthRequest(_ context.Context, req *http.Request) (request interface{}, err error) {
-	return addsvc.HealthRequest{}, nil
+	return addendpoints.HealthRequest{}, nil
 }
 
 // decodeHTTPSumResponse is a transport/http.DecodeResponseFunc that decodes a
@@ -123,7 +123,7 @@ func DecodeHTTPSumResponse(_ context.Context, r *http.Response) (interface{}, er
 	if r.StatusCode != http.StatusOK {
 		return nil, errors.New(r.Status)
 	}
-	var resp addsvc.SumResponse
+	var resp addendpoints.SumResponse
 	err := json.NewDecoder(r.Body).Decode(&resp)
 	return resp, err
 }
@@ -137,7 +137,7 @@ func DecodeHTTPConcatResponse(_ context.Context, r *http.Response) (interface{},
 	if r.StatusCode != http.StatusOK {
 		return nil, errors.New(r.Status)
 	}
-	var resp addsvc.ConcatResponse
+	var resp addendpoints.ConcatResponse
 	err := json.NewDecoder(r.Body).Decode(&resp)
 	return resp, err
 }

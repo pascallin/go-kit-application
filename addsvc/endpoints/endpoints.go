@@ -1,4 +1,4 @@
-package addsvc
+package endpoints
 
 import (
 	"context"
@@ -10,14 +10,14 @@ import (
 	"github.com/go-kit/kit/tracing/zipkin"
 	stdopentracing "github.com/opentracing/opentracing-go"
 	stdzipkin "github.com/openzipkin/zipkin-go"
-
 	// "github.com/sony/gobreaker"
-
 	// "github.com/go-kit/kit/circuitbreaker"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/ratelimit"
+
+	addservices "github.com/pascallin/go-kit-application/addsvc/services"
 )
 
 // Set collects all of the endpoints that compose an add service. It's meant to
@@ -31,7 +31,7 @@ type Set struct {
 
 // New returns a Set that wraps the provided server, and wires in all of the
 // expected endpoint middlewares via the various parameters.
-func NewEndpoints(svc Service, logger log.Logger, duration metrics.Histogram, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer) Set {
+func NewEndpoints(svc addservices.Service, logger log.Logger, duration metrics.Histogram, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer) Set {
 	var sumEndpoint endpoint.Endpoint
 	{
 		sumEndpoint = MakeSumEndpoint(svc)
@@ -94,7 +94,7 @@ func (s Set) Concat(ctx context.Context, a, b string) (string, error) {
 }
 
 // MakeSumEndpoint constructs a Sum endpoint wrapping the service.
-func MakeSumEndpoint(s Service) endpoint.Endpoint {
+func MakeSumEndpoint(s addservices.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(SumRequest)
 		v, err := s.Sum(ctx, req.A, req.B)
@@ -103,7 +103,7 @@ func MakeSumEndpoint(s Service) endpoint.Endpoint {
 }
 
 // MakeConcatEndpoint constructs a Concat endpoint wrapping the service.
-func MakeConcatEndpoint(s Service) endpoint.Endpoint {
+func MakeConcatEndpoint(s addservices.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(ConcatRequest)
 		v, err := s.Concat(ctx, req.A, req.B)
@@ -111,7 +111,7 @@ func MakeConcatEndpoint(s Service) endpoint.Endpoint {
 	}
 }
 
-func MakeHealthCheckEndpoint(svc Service) endpoint.Endpoint {
+func MakeHealthCheckEndpoint(svc addservices.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		status := svc.HealthCheck(ctx)
 		return HealthResponse{Status: status}, nil

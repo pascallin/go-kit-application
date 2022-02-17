@@ -4,14 +4,13 @@ import (
 	"context"
 	"errors"
 
-	stdopentracing "github.com/opentracing/opentracing-go"
-	stdzipkin "github.com/openzipkin/zipkin-go"
-
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/transport"
 	grpctransport "github.com/go-kit/kit/transport/grpc"
+	stdopentracing "github.com/opentracing/opentracing-go"
+	stdzipkin "github.com/openzipkin/zipkin-go"
 
-	"github.com/pascallin/go-kit-application/addsvc"
+	addendpoints "github.com/pascallin/go-kit-application/addsvc/endpoints"
 	"github.com/pascallin/go-kit-application/pb"
 )
 
@@ -23,7 +22,7 @@ type grpcServer struct {
 }
 
 // NewGRPCServer makes a set of endpoints available as a gRPC AddServer.
-func NewGRPCServer(endpoints addsvc.Set, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, logger log.Logger) pb.AddServer {
+func NewGRPCServer(endpoints addendpoints.Set, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, logger log.Logger) pb.AddServer {
 	options := []grpctransport.ServerOption{
 		grpctransport.ServerErrorHandler(transport.NewLogErrorHandler(logger)),
 	}
@@ -94,7 +93,7 @@ func (s *grpcServer) HealthCheck(ctx context.Context, req *pb.HealthCheckRequest
 // gRPC sum request to a user-domain sum request. Primarily useful in a server.
 func decodeGRPCSumRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(*pb.SumRequest)
-	return addsvc.SumRequest{A: int(req.A), B: int(req.B)}, nil
+	return addendpoints.SumRequest{A: int(req.A), B: int(req.B)}, nil
 }
 
 // decodeGRPCConcatRequest is a transport/grpc.DecodeRequestFunc that converts a
@@ -102,14 +101,14 @@ func decodeGRPCSumRequest(_ context.Context, grpcReq interface{}) (interface{}, 
 // server.
 func decodeGRPCConcatRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(*pb.ConcatRequest)
-	return addsvc.ConcatRequest{A: req.A, B: req.B}, nil
+	return addendpoints.ConcatRequest{A: req.A, B: req.B}, nil
 }
 
 // decodeGRPCSumResponse is a transport/grpc.DecodeResponseFunc that converts a
 // gRPC sum reply to a user-domain sum response. Primarily useful in a client.
 func decodeGRPCSumResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
 	reply := grpcReply.(*pb.SumReply)
-	return addsvc.SumResponse{V: int(reply.V), Err: str2err(reply.Err)}, nil
+	return addendpoints.SumResponse{V: int(reply.V), Err: str2err(reply.Err)}, nil
 }
 
 // decodeGRPCConcatResponse is a transport/grpc.DecodeResponseFunc that converts
@@ -117,13 +116,13 @@ func decodeGRPCSumResponse(_ context.Context, grpcReply interface{}) (interface{
 // client.
 func decodeGRPCConcatResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
 	reply := grpcReply.(*pb.ConcatReply)
-	return addsvc.ConcatResponse{V: reply.V, Err: str2err(reply.Err)}, nil
+	return addendpoints.ConcatResponse{V: reply.V, Err: str2err(reply.Err)}, nil
 }
 
 // encodeGRPCSumResponse is a transport/grpc.EncodeResponseFunc that converts a
 // user-domain sum response to a gRPC sum reply. Primarily useful in a server.
 func encodeGRPCSumResponse(_ context.Context, response interface{}) (interface{}, error) {
-	resp := response.(addsvc.SumResponse)
+	resp := response.(addendpoints.SumResponse)
 	return &pb.SumReply{V: int64(resp.V), Err: err2str(resp.Err)}, nil
 }
 
@@ -131,14 +130,14 @@ func encodeGRPCSumResponse(_ context.Context, response interface{}) (interface{}
 // a user-domain concat response to a gRPC concat reply. Primarily useful in a
 // server.
 func encodeGRPCConcatResponse(_ context.Context, response interface{}) (interface{}, error) {
-	resp := response.(addsvc.ConcatResponse)
+	resp := response.(addendpoints.ConcatResponse)
 	return &pb.ConcatReply{V: resp.V, Err: err2str(resp.Err)}, nil
 }
 
 // encodeGRPCSumRequest is a transport/grpc.EncodeRequestFunc that converts a
 // user-domain sum request to a gRPC sum request. Primarily useful in a client.
 func encodeGRPCSumRequest(_ context.Context, request interface{}) (interface{}, error) {
-	req := request.(addsvc.SumRequest)
+	req := request.(addendpoints.SumRequest)
 	return &pb.SumRequest{A: int64(req.A), B: int64(req.B)}, nil
 }
 
@@ -146,7 +145,7 @@ func encodeGRPCSumRequest(_ context.Context, request interface{}) (interface{}, 
 // user-domain concat request to a gRPC concat request. Primarily useful in a
 // client.
 func encodeGRPCConcatRequest(_ context.Context, request interface{}) (interface{}, error) {
-	req := request.(addsvc.ConcatRequest)
+	req := request.(addendpoints.ConcatRequest)
 	return &pb.ConcatRequest{A: req.A, B: req.B}, nil
 }
 
@@ -155,7 +154,7 @@ func decodeGRPCHealthRequest(_ context.Context, request interface{}) (interface{
 	return &pb.HealthCheckRequest{}, nil
 }
 func encodeGRPCHealthResponse(_ context.Context, response interface{}) (interface{}, error) {
-	resp := response.(addsvc.HealthResponse)
+	resp := response.(addendpoints.HealthResponse)
 	return &pb.HealthCheckReply{Status: resp.Status}, nil
 }
 

@@ -25,6 +25,8 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 
 	"github.com/pascallin/go-kit-application/addsvc"
+	addndpoints "github.com/pascallin/go-kit-application/addsvc/endpoints"
+	addservices "github.com/pascallin/go-kit-application/addsvc/services"
 	addtransport "github.com/pascallin/go-kit-application/addsvc/transports"
 	"github.com/pascallin/go-kit-application/discovery"
 	"github.com/pascallin/go-kit-application/pb"
@@ -119,8 +121,8 @@ func main() {
 	}
 
 	var (
-		service    = addsvc.NewService(logger, ints, chars)
-		endpoints  = addsvc.NewEndpoints(service, logger, duration, tracer, zipkinTracer)
+		service    = addservices.NewService(logger, ints, chars)
+		endpoints  = addndpoints.NewEndpoints(service, logger, duration, tracer, zipkinTracer)
 		grpcServer = addtransport.NewGRPCServer(endpoints, tracer, zipkinTracer, logger)
 	)
 
