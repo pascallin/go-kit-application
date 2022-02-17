@@ -6,16 +6,16 @@ import (
 
 	"golang.org/x/time/rate"
 
-	"github.com/go-kit/kit/tracing/opentracing"
-	"github.com/go-kit/kit/tracing/zipkin"
-	stdopentracing "github.com/opentracing/opentracing-go"
-	stdzipkin "github.com/openzipkin/zipkin-go"
-	// "github.com/sony/gobreaker"
-	// "github.com/go-kit/kit/circuitbreaker"
+	"github.com/go-kit/kit/circuitbreaker"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/ratelimit"
+	"github.com/go-kit/kit/tracing/opentracing"
+	"github.com/go-kit/kit/tracing/zipkin"
+	stdopentracing "github.com/opentracing/opentracing-go"
+	stdzipkin "github.com/openzipkin/zipkin-go"
+	"github.com/sony/gobreaker"
 
 	addservices "github.com/pascallin/go-kit-application/addsvc/services"
 )
@@ -38,7 +38,7 @@ func NewEndpoints(svc addservices.Service, logger log.Logger, duration metrics.H
 		// Sum is limited to 1 request per second with burst of 1 request.
 		// Note, rate is defined as a time interval between requests.
 		sumEndpoint = ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Every(time.Second), 1))(sumEndpoint)
-		// sumEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(sumEndpoint)
+		sumEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(sumEndpoint)
 		sumEndpoint = opentracing.TraceServer(otTracer, "Sum")(sumEndpoint)
 		if zipkinTracer != nil {
 			sumEndpoint = zipkin.TraceEndpoint(zipkinTracer, "Sum")(sumEndpoint)
@@ -52,7 +52,7 @@ func NewEndpoints(svc addservices.Service, logger log.Logger, duration metrics.H
 		// Concat is limited to 1 request per second with burst of 100 requests.
 		// Note, rate is defined as a number of requests per second.
 		concatEndpoint = ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Limit(1), 100))(concatEndpoint)
-		// concatEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(concatEndpoint)
+		concatEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(concatEndpoint)
 		concatEndpoint = opentracing.TraceServer(otTracer, "Concat")(concatEndpoint)
 		if zipkinTracer != nil {
 			concatEndpoint = zipkin.TraceEndpoint(zipkinTracer, "Concat")(concatEndpoint)

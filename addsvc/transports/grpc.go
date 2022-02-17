@@ -5,6 +5,8 @@ import (
 	"errors"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/tracing/opentracing"
+	"github.com/go-kit/kit/tracing/zipkin"
 	"github.com/go-kit/kit/transport"
 	grpctransport "github.com/go-kit/kit/transport/grpc"
 	stdopentracing "github.com/opentracing/opentracing-go"
@@ -27,33 +29,31 @@ func NewGRPCServer(endpoints addendpoints.Set, otTracer stdopentracing.Tracer, z
 		grpctransport.ServerErrorHandler(transport.NewLogErrorHandler(logger)),
 	}
 
-	// if zipkinTracer != nil {
-	// 	// Zipkin GRPC Server Trace can either be instantiated per gRPC method with a
-	// 	// provided operation name or a global tracing service can be instantiated
-	// 	// without an operation name and fed to each Go kit gRPC server as a
-	// 	// ServerOption.
-	// 	// In the latter case, the operation name will be the endpoint's grpc method
-	// 	// path if used in combination with the Go kit gRPC Interceptor.
-	// 	//
-	// 	// In this example, we demonstrate a global Zipkin tracing service with
-	// 	// Go kit gRPC Interceptor.
-	// 	options = append(options, zipkin.GRPCServerTrace(zipkinTracer))
-	// }
+	if zipkinTracer != nil {
+		// Zipkin GRPC Server Trace can either be instantiated per gRPC method with a
+		// provided operation name or a global tracing service can be instantiated
+		// without an operation name and fed to each Go kit gRPC server as a
+		// ServerOption.
+		// In the latter case, the operation name will be the endpoint's grpc method
+		// path if used in combination with the Go kit gRPC Interceptor.
+		//
+		// In this example, we demonstrate a global Zipkin tracing service with
+		// Go kit gRPC Interceptor.
+		options = append(options, zipkin.GRPCServerTrace(zipkinTracer))
+	}
 
 	return &grpcServer{
 		sum: grpctransport.NewServer(
 			endpoints.SumEndpoint,
 			decodeGRPCSumRequest,
 			encodeGRPCSumResponse,
-			// append(options, grpctransport.ServerBefore(opentracing.GRPCToContext(otTracer, "Sum", logger)))...,
-			options...,
+			append(options, grpctransport.ServerBefore(opentracing.GRPCToContext(otTracer, "Sum", logger)))...,
 		),
 		concat: grpctransport.NewServer(
 			endpoints.ConcatEndpoint,
 			decodeGRPCConcatRequest,
 			encodeGRPCConcatResponse,
-			// append(options, grpctransport.ServerBefore(opentracing.GRPCToContext(otTracer, "Concat", logger)))...,
-			options...,
+			append(options, grpctransport.ServerBefore(opentracing.GRPCToContext(otTracer, "Concat", logger)))...,
 		),
 		healthCheck: grpctransport.NewServer(
 			endpoints.HealthCheckEndpoint,
