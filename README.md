@@ -22,6 +22,11 @@ go-kit service
 ### Using go-kit sd package
 
 - `consul` for discovery
+- `zipkin` tracing
+
+### Other standard
+
+- grpc health check endpoint
 
 ## Run
 
