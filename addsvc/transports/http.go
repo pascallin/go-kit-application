@@ -44,7 +44,7 @@ func NewHTTPHandler(endpoints addendpoints.Set, otTracer stdopentracing.Tracer, 
 		endpoints.HealthCheckEndpoint,
 		DecodeHealthRequest,
 		EncodeHTTPGenericResponse,
-		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(otTracer, "Concat", logger)))...,
+		options...,
 	))
 	m.Handle("/sum", httptransport.NewServer(
 		endpoints.SumEndpoint,
