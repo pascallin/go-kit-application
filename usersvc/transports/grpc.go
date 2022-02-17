@@ -13,8 +13,9 @@ import (
 )
 
 type grpcServer struct {
-	register grpc.Handler
-	login    grpc.Handler
+	register       grpc.Handler
+	login          grpc.Handler
+	updatePassword grpc.Handler
 	pb.UnimplementedUserServer
 }
 
@@ -33,6 +34,12 @@ func NewGRPCServer(endpoints endpoints.EndpointSet, logger log.Logger) pb.UserSe
 			endpoints.LoginEndpoint,
 			decodeGRPCLoginRequest,
 			encodeGRPCLoginResponse,
+			options...,
+		),
+		updatePassword: grpc.NewServer(
+			endpoints.UpdatePasswordEndpoint,
+			decodeGRPCUpdatepasswordRequest,
+			encodeGRPCUpdatePasswordResponse,
 			options...,
 		),
 	}
@@ -79,6 +86,28 @@ func decodeGRPCLoginRequest(_ context.Context, grpcReq interface{}) (interface{}
 func encodeGRPCLoginResponse(_ context.Context, response interface{}) (interface{}, error) {
 	res := response.(endpoints.LoginResponse)
 	return &pb.LoginResponse{Token: res.Token, Err: err2str(res.Err)}, nil
+}
+
+func (s *grpcServer) UpdatePassword(ctx context.Context, req *pb.UpdatePasswordRequest) (*pb.UpdatePasswordResponse, error) {
+	_, rep, err := s.updatePassword.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return rep.(*pb.UpdatePasswordResponse), nil
+}
+
+func decodeGRPCUpdatepasswordRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(*pb.UpdatePasswordRequest)
+	return endpoints.UpdatePasswordRequest{
+		Username:    req.Username,
+		Password:    req.Password,
+		NewPassword: req.NewPassword,
+	}, nil
+}
+
+func encodeGRPCUpdatePasswordResponse(_ context.Context, response interface{}) (interface{}, error) {
+	res := response.(endpoints.UpdatePasswordResponse)
+	return &pb.UpdatePasswordResponse{Err: err2str(res.Err)}, nil
 }
 
 func str2err(s string) error {

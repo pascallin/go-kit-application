@@ -6,6 +6,7 @@ option go_package = "pb/pb";
 service User {
     rpc Register (RegisterRequest) returns (RegisterResponse) {}
     rpc Login (LoginRequest) returns (LoginResponse) {}
+    rpc UpdatePassword (UpdatePasswordRequest) returns (UpdatePasswordResponse) {}
 }
 
 message RegisterRequest {
@@ -27,4 +28,14 @@ message LoginRequest {
 message LoginResponse {
     string token = 1;
     string err = 2;
+}
+
+message UpdatePasswordRequest {
+    string username = 1;
+    string password = 2;
+    string newPassword = 3;
+}
+
+message UpdatePasswordResponse {
+    string err = 1;
 }

@@ -14,12 +14,13 @@ import (
 )
 
 type EndpointSet struct {
-	RegisterEndpoint endpoint.Endpoint
-	LoginEndpoint    endpoint.Endpoint
+	RegisterEndpoint       endpoint.Endpoint
+	LoginEndpoint          endpoint.Endpoint
+	UpdatePasswordEndpoint endpoint.Endpoint
 }
 
 func New(svc userservice.Service, logger log.Logger, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer) EndpointSet {
-	var registerEndpoint, loginEndpoint endpoint.Endpoint
+	var registerEndpoint, loginEndpoint, updatePasswordEndpoint endpoint.Endpoint
 	{
 		registerEndpoint = makeRegisterEndpoint(svc)
 		registerEndpoint = LoggingMiddleware(log.With(logger, "method", "Register"))(registerEndpoint)
@@ -31,14 +32,23 @@ func New(svc userservice.Service, logger log.Logger, otTracer stdopentracing.Tra
 	{
 		loginEndpoint = makeLoginEndpoint(svc)
 		loginEndpoint = LoggingMiddleware(log.With(logger, "method", "Login"))(loginEndpoint)
-		loginEndpoint = opentracing.TraceServer(otTracer, "Register")(loginEndpoint)
+		loginEndpoint = opentracing.TraceServer(otTracer, "Login")(loginEndpoint)
 		if zipkinTracer != nil {
 			loginEndpoint = zipkin.TraceEndpoint(zipkinTracer, "Login")(loginEndpoint)
 		}
 	}
+	{
+		updatePasswordEndpoint = makeUpdatePasswordEndpoint(svc)
+		updatePasswordEndpoint = LoggingMiddleware(log.With(logger, "method", "UpdatePassword"))(updatePasswordEndpoint)
+		updatePasswordEndpoint = opentracing.TraceServer(otTracer, "UpdatePassword")(updatePasswordEndpoint)
+		if zipkinTracer != nil {
+			updatePasswordEndpoint = zipkin.TraceEndpoint(zipkinTracer, "UpdatePassword")(updatePasswordEndpoint)
+		}
+	}
 	return EndpointSet{
-		RegisterEndpoint: registerEndpoint,
-		LoginEndpoint:    loginEndpoint,
+		RegisterEndpoint:       registerEndpoint,
+		LoginEndpoint:          loginEndpoint,
+		UpdatePasswordEndpoint: updatePasswordEndpoint,
 	}
 }
 
@@ -72,5 +82,21 @@ func makeLoginEndpoint(s userservice.Service) endpoint.Endpoint {
 		req := request.(LoginRequest)
 		err, token := s.Login(ctx, req.Username, req.Password)
 		return LoginResponse{Token: token, Err: err}, nil
+	}
+}
+
+type UpdatePasswordRequest struct {
+	Username, Password, NewPassword string
+}
+
+type UpdatePasswordResponse struct {
+	Err error
+}
+
+func makeUpdatePasswordEndpoint(s userservice.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(UpdatePasswordRequest)
+		err = s.UpdatePassword(ctx, req.Username, req.Password, req.NewPassword)
+		return UpdatePasswordResponse{Err: err}, nil
 	}
 }
