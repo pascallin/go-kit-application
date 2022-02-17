@@ -20,6 +20,8 @@ import (
 // Service describes a service that adds things together.
 type Service interface {
 	Register(ctx context.Context, username, password, nickname string) (error, primitive.ObjectID)
+	Login(ctx context.Context, username string, password string) (err error, token string)
+	UpdatePassword(ctx context.Context, username, password, newPassword string) error
 }
 
 // New returns a basic Service with all of the expected middlewares wired in.
@@ -44,18 +46,18 @@ type User struct {
 	Password string `bson:"password" json:"password"`
 }
 
-func (s userService) findUserByUserName(username string) (error, *User) {
+func (s userService) findUserByUserName(ctx context.Context, username string) (error, *User) {
 	user := &User{}
 	err := db.MongoDB.DB.Collection("users").
-		FindOne(context.Background(), bson.M{"username": username}).Decode(user)
+		FindOne(ctx, bson.M{"username": username}).Decode(user)
 	if err != nil {
 		return err, nil
 	}
 	return nil, user
 }
 
-func (s userService) login(username string, password string) (err error, token string) {
-	err, user := s.findUserByUserName(username)
+func (s userService) Login(ctx context.Context, username string, password string) (err error, token string) {
+	err, user := s.findUserByUserName(ctx, username)
 	if err != nil {
 		return err, ""
 	}
@@ -75,7 +77,7 @@ func (s userService) login(username string, password string) (err error, token s
 }
 
 func (s userService) Register(ctx context.Context, username, password, nickname string) (error, primitive.ObjectID) {
-	_, existUser := s.findUserByUserName(username)
+	_, existUser := s.findUserByUserName(ctx, username)
 	fmt.Println(existUser)
 	if existUser != nil {
 		return errors.New("username existed"), primitive.NilObjectID
@@ -94,18 +96,18 @@ func (s userService) Register(ctx context.Context, username, password, nickname 
 	return nil, insertResult.InsertedID.(primitive.ObjectID)
 }
 
-func (s userService) updatePassword(username, password, newPassword string) error {
+func (s userService) UpdatePassword(ctx context.Context, username, password, newPassword string) error {
 	var user User
 	p := md5.Sum([]byte(password))
 	matchUser := db.MongoDB.DB.Collection("users").
-		FindOne(context.Background(), bson.M{
+		FindOne(ctx, bson.M{
 			"username": username,
 			"password": fmt.Sprintf("%x", p),
 		})
 	if matchUser == nil {
 		return errors.New("username and old password not match")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	np := md5.Sum([]byte(newPassword))
 	after := options.After

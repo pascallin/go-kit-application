@@ -25,7 +25,21 @@ type loggingMiddleware struct {
 
 func (mw loggingMiddleware) Register(ctx context.Context, username, password, nickname string) (err error, id primitive.ObjectID) {
 	defer func() {
-		mw.logger.Log("method", "Register", "username", username, "username", username, "err", err)
+		mw.logger.Log("method", "Register", "username", username, "err", err)
 	}()
 	return mw.next.Register(ctx, username, password, nickname)
+}
+
+func (mw loggingMiddleware) Login(ctx context.Context, username, password string) (err error, token string) {
+	defer func() {
+		mw.logger.Log("method", "Login", "username", username, "err", err)
+	}()
+	return mw.next.Login(ctx, username, password)
+}
+
+func (mw loggingMiddleware) UpdatePassword(ctx context.Context, username string, password string, newPassword string) (err error) {
+	defer func() {
+		mw.logger.Log("method", "UpdatePassword", "username", username, "err", err)
+	}()
+	return mw.next.UpdatePassword(ctx, username, password, newPassword)
 }

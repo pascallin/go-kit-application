@@ -14,15 +14,8 @@ import (
 
 type grpcServer struct {
 	register grpc.Handler
+	login    grpc.Handler
 	pb.UnimplementedUserServer
-}
-
-func (s *grpcServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
-	_, rep, err := s.register.ServeGRPC(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	return rep.(*pb.RegisterResponse), nil
 }
 
 func NewGRPCServer(endpoints endpoints.EndpointSet, logger log.Logger) pb.UserServer {
@@ -36,7 +29,21 @@ func NewGRPCServer(endpoints endpoints.EndpointSet, logger log.Logger) pb.UserSe
 			encodeGRPCRegisterResponse,
 			options...,
 		),
+		login: grpc.NewServer(
+			endpoints.LoginEndpoint,
+			decodeGRPCLoginRequest,
+			encodeGRPCLoginResponse,
+			options...,
+		),
 	}
+}
+
+func (s *grpcServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
+	_, rep, err := s.register.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return rep.(*pb.RegisterResponse), nil
 }
 
 func decodeGRPCRegisterRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
@@ -51,6 +58,27 @@ func decodeGRPCRegisterRequest(_ context.Context, grpcReq interface{}) (interfac
 func encodeGRPCRegisterResponse(_ context.Context, response interface{}) (interface{}, error) {
 	res := response.(endpoints.RegisterResponse)
 	return &pb.RegisterResponse{Id: res.Id, Err: err2str(res.Err)}, nil
+}
+
+func (s *grpcServer) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
+	_, rep, err := s.login.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return rep.(*pb.LoginResponse), nil
+}
+
+func decodeGRPCLoginRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(*pb.LoginRequest)
+	return endpoints.LoginRequest{
+		Username: req.Username,
+		Password: req.Password,
+	}, nil
+}
+
+func encodeGRPCLoginResponse(_ context.Context, response interface{}) (interface{}, error) {
+	res := response.(endpoints.LoginResponse)
+	return &pb.LoginResponse{Token: res.Token, Err: err2str(res.Err)}, nil
 }
 
 func str2err(s string) error {
