@@ -7,7 +7,6 @@ import (
 
 	"github.com/pascallin/go-kit-application/config"
 	"github.com/pascallin/go-kit-application/pkg"
-	"github.com/pascallin/go-kit-application/pkg/discovery"
 	"github.com/pascallin/go-kit-application/usersvc"
 )
 
@@ -19,11 +18,11 @@ func main() {
 	defer stop()
 
 	if c.IsNeedDiscovery {
-		client, err := discovery.NewKitDiscoverClient()
+		client, err := pkg.NewKitDiscoverClient()
 		if err != nil {
 			panic(err)
 		}
-		status := client.Register(c.Name, discovery.ServiceInstance{
+		status := client.Register(c.Name, pkg.ServiceInstance{
 			InstanceId:   c.HostName,
 			InstanceHost: c.Host,
 			InstancePort: c.GrpcPort,
