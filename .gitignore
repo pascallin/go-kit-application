@@ -20,3 +20,5 @@ vendor/
 docker-infrastructure/*
 
 **/tmp
+
+.env

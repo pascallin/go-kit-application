@@ -8,11 +8,11 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.3.0
 	github.com/hashicorp/consul/api v1.12.0
 	github.com/joho/godotenv v1.3.0
-	github.com/oklog/oklog v0.3.2
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/openzipkin-contrib/zipkin-go-opentracing v0.4.5
 	github.com/openzipkin/zipkin-go v0.2.5
 	github.com/prometheus/client_golang v1.11.0
+	github.com/sirupsen/logrus v1.8.1
 	github.com/sony/gobreaker v0.5.0
 	go.mongodb.org/mongo-driver v1.8.2
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
@@ -44,7 +44,6 @@ require (
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
-	github.com/oklog/run v1.1.0 // indirect
 	github.com/opentracing-contrib/go-observer v0.0.0-20170622124052-a52f23424492 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect

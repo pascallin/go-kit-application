@@ -14,7 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/pascallin/go-kit-application/conn"
+	"github.com/pascallin/go-kit-application/pkg/conn"
 )
 
 // Service describes a service that adds things together.
@@ -48,8 +48,11 @@ type User struct {
 
 func (s userService) findUserByUserName(ctx context.Context, username string) (error, *User) {
 	user := &User{}
-	err := db.MongoDB.DB.Collection("users").
-		FindOne(ctx, bson.M{"username": username}).Decode(user)
+	c, err := conn.GetMongo(ctx)
+	if err != nil {
+		return err, nil
+	}
+	err = c.DB.Collection("users").FindOne(ctx, bson.M{"username": username}).Decode(user)
 	if err != nil {
 		return err, nil
 	}
@@ -77,15 +80,17 @@ func (s userService) Login(ctx context.Context, username string, password string
 }
 
 func (s userService) Register(ctx context.Context, username, password, nickname string) (error, primitive.ObjectID) {
+	c, err := conn.GetMongo(ctx)
+	if err != nil {
+		return err, primitive.NilObjectID
+	}
+
 	_, existUser := s.findUserByUserName(ctx, username)
-	fmt.Println(existUser)
 	if existUser != nil {
 		return errors.New("username existed"), primitive.NilObjectID
 	}
-	dbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
 	p := md5.Sum([]byte(password))
-	insertResult, err := db.MongoDB.DB.Collection("users").InsertOne(dbCtx, User{
+	insertResult, err := c.DB.Collection("users").InsertOne(ctx, User{
 		username,
 		nickname,
 		fmt.Sprintf("%x", p),
@@ -97,9 +102,14 @@ func (s userService) Register(ctx context.Context, username, password, nickname 
 }
 
 func (s userService) UpdatePassword(ctx context.Context, username, password, newPassword string) error {
+	c, err := conn.GetMongo(ctx)
+	if err != nil {
+		return err
+	}
+
 	var user User
 	p := md5.Sum([]byte(password))
-	matchUser := db.MongoDB.DB.Collection("users").
+	matchUser := c.DB.Collection("users").
 		FindOne(ctx, bson.M{
 			"username": username,
 			"password": fmt.Sprintf("%x", p),
@@ -111,7 +121,7 @@ func (s userService) UpdatePassword(ctx context.Context, username, password, new
 	defer cancel()
 	np := md5.Sum([]byte(newPassword))
 	after := options.After
-	err := db.MongoDB.DB.Collection("users").
+	err = c.DB.Collection("users").
 		FindOneAndUpdate(ctx,
 			bson.M{"username": username},
 			bson.M{"$set": bson.M{"password": fmt.Sprintf("%x", np)}},

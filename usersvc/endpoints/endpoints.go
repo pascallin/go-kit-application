@@ -10,7 +10,12 @@ import (
 	stdopentracing "github.com/opentracing/opentracing-go"
 	stdzipkin "github.com/openzipkin/zipkin-go"
 
-	userservice "github.com/pascallin/go-kit-application/usersvc/services"
+	"github.com/pascallin/go-kit-application/usersvc/services"
+)
+
+var (
+	zipkinTracer *stdzipkin.Tracer
+	tracer       stdopentracing.Tracer
 )
 
 type EndpointSet struct {
@@ -19,7 +24,7 @@ type EndpointSet struct {
 	UpdatePasswordEndpoint endpoint.Endpoint
 }
 
-func New(svc userservice.Service, logger log.Logger, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer) EndpointSet {
+func New(svc services.Service, logger log.Logger, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer) EndpointSet {
 	var registerEndpoint, loginEndpoint, updatePasswordEndpoint endpoint.Endpoint
 	{
 		registerEndpoint = makeRegisterEndpoint(svc)
@@ -60,7 +65,7 @@ type RegisterResponse struct {
 	Err error
 }
 
-func makeRegisterEndpoint(s userservice.Service) endpoint.Endpoint {
+func makeRegisterEndpoint(s services.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(RegisterRequest)
 		err, id := s.Register(ctx, req.Username, req.Password, req.Nickname)
@@ -77,7 +82,7 @@ type LoginResponse struct {
 	Err   error
 }
 
-func makeLoginEndpoint(s userservice.Service) endpoint.Endpoint {
+func makeLoginEndpoint(s services.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(LoginRequest)
 		err, token := s.Login(ctx, req.Username, req.Password)
@@ -93,7 +98,7 @@ type UpdatePasswordResponse struct {
 	Err error
 }
 
-func makeUpdatePasswordEndpoint(s userservice.Service) endpoint.Endpoint {
+func makeUpdatePasswordEndpoint(s services.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(UpdatePasswordRequest)
 		err = s.UpdatePassword(ctx, req.Username, req.Password, req.NewPassword)

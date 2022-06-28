@@ -65,10 +65,10 @@ docker-compose up -d
 
 ### Development
 
-All commands stay in `[service]/cmd` folder, we using [air](https://github.com/cosmtrek/air) as live reload tools.
+All commands stay in `[service]/cmd` folder.
 
 ```shell
-cd addsvc && air
+go run addsvc/cmd/addsvc.go
 ```
 
 ## TODO list

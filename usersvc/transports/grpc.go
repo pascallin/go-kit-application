@@ -8,7 +8,7 @@ import (
 	"github.com/go-kit/kit/transport"
 	"github.com/go-kit/kit/transport/grpc"
 
-	"github.com/pascallin/go-kit-application/pb"
+	pb "github.com/pascallin/go-kit-application/pb/usersvc"
 	"github.com/pascallin/go-kit-application/usersvc/endpoints"
 )
 
@@ -38,7 +38,7 @@ func NewGRPCServer(endpoints endpoints.EndpointSet, logger log.Logger) pb.UserSe
 		),
 		updatePassword: grpc.NewServer(
 			endpoints.UpdatePasswordEndpoint,
-			decodeGRPCUpdatepasswordRequest,
+			decodeGRPCUpdatePasswordRequest,
 			encodeGRPCUpdatePasswordResponse,
 			options...,
 		),
@@ -96,7 +96,7 @@ func (s *grpcServer) UpdatePassword(ctx context.Context, req *pb.UpdatePasswordR
 	return rep.(*pb.UpdatePasswordResponse), nil
 }
 
-func decodeGRPCUpdatepasswordRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+func decodeGRPCUpdatePasswordRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(*pb.UpdatePasswordRequest)
 	return endpoints.UpdatePasswordRequest{
 		Username:    req.Username,

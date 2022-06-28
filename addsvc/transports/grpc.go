@@ -13,7 +13,7 @@ import (
 	stdzipkin "github.com/openzipkin/zipkin-go"
 
 	addendpoints "github.com/pascallin/go-kit-application/addsvc/endpoints"
-	"github.com/pascallin/go-kit-application/pb"
+	pb "github.com/pascallin/go-kit-application/pb/addsvc"
 )
 
 type grpcServer struct {
