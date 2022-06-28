@@ -14,7 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/pascallin/go-kit-application/pkg/conn"
+	"github.com/pascallin/go-kit-application/conn"
 )
 
 // Service describes a service that adds things together.

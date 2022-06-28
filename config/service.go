@@ -29,7 +29,7 @@ func GetAddSvcConfig() ServiceConfig {
 		DebugPort:       9081,
 		HttpPort:        9082,
 		GrpcPort:        9083,
-		IsNeedDiscovery: true,
+		IsNeedDiscovery: false,
 	}
 }
 
@@ -41,6 +41,6 @@ func GetUserSvcConfig() ServiceConfig {
 		DebugPort:       9091,
 		HttpPort:        9092,
 		GrpcPort:        9093,
-		IsNeedDiscovery: true,
+		IsNeedDiscovery: false,
 	}
 }
