@@ -29,6 +29,21 @@ type Set struct {
 	HealthCheckEndpoint endpoint.Endpoint
 }
 
+// Concat implements services.Service
+func (Set) Concat(ctx context.Context, a string, b string) (string, error) {
+	panic("unimplemented")
+}
+
+// HealthCheck implements services.Service
+func (Set) HealthCheck(ctx context.Context) bool {
+	panic("unimplemented")
+}
+
+// Sum implements services.Service
+func (Set) Sum(ctx context.Context, a int, b int) (int, error) {
+	panic("unimplemented")
+}
+
 // New returns a Set that wraps the provided server, and wires in all of the
 // expected endpoint middlewares via the various parameters.
 func NewEndpoints(svc addservices.Service, logger log.Logger, duration metrics.Histogram, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer) Set {

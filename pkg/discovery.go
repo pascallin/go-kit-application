@@ -11,7 +11,7 @@ import (
 )
 
 type KitDiscoverClient struct {
-	client      consulsd.Client
+	Client      consulsd.Client
 	config      *consulapi.Config
 	mutex       sync.Mutex
 	instanceMap sync.Map
@@ -30,7 +30,7 @@ func NewKitDiscoverClient() (client *KitDiscoverClient, err error) {
 	if err != nil {
 		return nil, err
 	}
-	c.client = consulsd.NewClient(apiClient)
+	c.Client = consulsd.NewClient(apiClient)
 	c.config = config
 	return c, err
 }
@@ -48,7 +48,7 @@ func (c *KitDiscoverClient) Register(name string, instance ServiceInstance, meta
 			Interval:                       "15s",
 		},
 	}
-	err := c.client.Register(serviceRegistration)
+	err := c.Client.Register(serviceRegistration)
 	if err != nil {
 		log.Println("Register Service Error!")
 		log.Panicln(err)
@@ -58,11 +58,11 @@ func (c *KitDiscoverClient) Register(name string, instance ServiceInstance, meta
 	return true
 }
 
-func (c *KitDiscoverClient) DeRegister(instanceId string) bool {
+func (c *KitDiscoverClient) Deregister(instanceId string) bool {
 	serviceRegistration := &consulapi.AgentServiceRegistration{
 		ID: instanceId,
 	}
-	err := c.client.Deregister(serviceRegistration)
+	err := c.Client.Deregister(serviceRegistration)
 	if err != nil {
 		log.Println("Deregister Service Error!")
 		return false
@@ -122,7 +122,7 @@ func (c *KitDiscoverClient) DiscoveryServices(serviceName string) []interface{} 
 	}()
 
 	// get entries from consul
-	entries, _, err := c.client.Service(serviceName, "", false, nil)
+	entries, _, err := c.Client.Service(serviceName, "", false, nil)
 	if err != nil {
 		c.instanceMap.Store(serviceName, []interface{}{})
 		log.Println("Discover Service Error")

@@ -33,7 +33,7 @@ func main() {
 			InstancePort: c.GrpcPort,
 		}, make(map[string]string))
 		logger.Log("consul discovery register ", status)
-		defer client.DeRegister(c.Name)
+		defer client.Deregister(c.Name)
 	}
 
 	http.DefaultServeMux.Handle("/metrics", promhttp.Handler())
