@@ -1,4 +1,4 @@
-package gateway
+package svc
 
 import (
 	"context"
@@ -22,7 +22,7 @@ import (
 	"github.com/pascallin/go-kit-application/pkg"
 )
 
-func registerAddsvc(ctx context.Context, r *mux.Router, tracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, client consulsd.Client) {
+func RegisterAddsvc(ctx context.Context, r *mux.Router, tracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, client consulsd.Client) {
 	config := config.GetGatewayConfig()
 	logger := pkg.GetLogger()
 

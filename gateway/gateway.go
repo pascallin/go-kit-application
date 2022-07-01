@@ -1,4 +1,4 @@
-package gateway
+package main
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	stdzipkin "github.com/openzipkin/zipkin-go"
 
 	"github.com/pascallin/go-kit-application/config"
+	"github.com/pascallin/go-kit-application/gateway/svc"
 	"github.com/pascallin/go-kit-application/pkg"
 )
 
@@ -28,7 +29,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	registerAddsvc(ctx, r, tracer, zipkinTracer, discoveryClient.Client)
+	svc.RegisterAddsvc(ctx, r, tracer, zipkinTracer, discoveryClient.Client)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
