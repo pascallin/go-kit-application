@@ -19,10 +19,10 @@ go-kit endpoint
 go-kit service
 ```
 
-### Using go-kit sd package
+### go-kit standard package
 
-- `consul` for discovery
-- `zipkin` tracing
+- sd using `consul`
+- tracing using `zipkin`
 
 ### Other standard
 
@@ -49,7 +49,7 @@ go mod download
 
 ### Infrastructure services
 
-needed consul & zipkin
+If you need consul & zipkin
 
 there are some `docker-compose` files in my other github repository([go to reference](https://github.com/pascallin/devops))
 
