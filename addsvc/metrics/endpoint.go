@@ -1,4 +1,4 @@
-package endpoints
+package metrics
 
 import (
 	"github.com/go-kit/kit/metrics"
@@ -8,15 +8,20 @@ import (
 	"github.com/pascallin/go-kit-application/config"
 )
 
-func InitMetrics() (duration metrics.Histogram) {
+var _requestDurationMetrics metrics.Histogram
+
+func GetEndpointMetrics() (duration metrics.Histogram) {
+	if _requestDurationMetrics != nil {
+		return _requestDurationMetrics
+	}
 	c := config.GetAddSvcConfig()
 	// Endpoint-level metrics.
-	duration = prometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
+	_requestDurationMetrics = prometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
 		Namespace: "example",
 		Subsystem: c.Name,
 		Name:      "request_duration_seconds",
 		Help:      "Request duration in seconds.",
 	}, []string{"method", "success"})
 
-	return duration
+	return _requestDurationMetrics
 }

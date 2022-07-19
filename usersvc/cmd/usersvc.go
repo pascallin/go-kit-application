@@ -32,6 +32,12 @@ func main() {
 	}
 
 	go func() {
+		if err := pkg.StartDebugServer(c.DebugPort, logger); err != nil {
+			logger.Log(err.Error())
+		}
+	}()
+
+	go func() {
 		if err := usersvc.GrpcServe(logger); err != nil {
 			logger.Log(err.Error())
 		}
