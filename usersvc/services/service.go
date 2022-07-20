@@ -46,12 +46,9 @@ type User struct {
 	Password string `bson:"password" json:"password"`
 }
 
-func (s userService) findUserByUserName(ctx context.Context, username string) (error, *User) {
-	user := &User{}
-	c, err := conn.GetMongo(ctx)
-	if err != nil {
-		return err, nil
-	}
+func (s userService) findUserByUserName(ctx context.Context, username string) (err error, user *User) {
+	user = &User{}
+	c := conn.GetMongo(ctx)
 	err = c.DB.Collection("users").FindOne(ctx, bson.M{"username": username}).Decode(user)
 	if err != nil {
 		return err, nil
@@ -79,11 +76,8 @@ func (s userService) Login(ctx context.Context, username string, password string
 	return nil, tokenString
 }
 
-func (s userService) Register(ctx context.Context, username, password, nickname string) (error, primitive.ObjectID) {
-	c, err := conn.GetMongo(ctx)
-	if err != nil {
-		return err, primitive.NilObjectID
-	}
+func (s userService) Register(ctx context.Context, username, password, nickname string) (err error, id primitive.ObjectID) {
+	c := conn.GetMongo(ctx)
 
 	_, existUser := s.findUserByUserName(ctx, username)
 	if existUser != nil {
@@ -98,14 +92,13 @@ func (s userService) Register(ctx context.Context, username, password, nickname 
 	if err != nil {
 		return err, primitive.NilObjectID
 	}
-	return nil, insertResult.InsertedID.(primitive.ObjectID)
+
+	id = insertResult.InsertedID.(primitive.ObjectID)
+	return nil, id
 }
 
-func (s userService) UpdatePassword(ctx context.Context, username, password, newPassword string) error {
-	c, err := conn.GetMongo(ctx)
-	if err != nil {
-		return err
-	}
+func (s userService) UpdatePassword(ctx context.Context, username, password, newPassword string) (err error) {
+	c := conn.GetMongo(ctx)
 
 	var user User
 	p := md5.Sum([]byte(password))

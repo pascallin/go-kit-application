@@ -2,6 +2,7 @@ package conn
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -22,29 +23,34 @@ type Mongo struct {
 	Client *mongo.Client
 }
 
-func GetMongo(ctx context.Context) (*Mongo, error) {
-	connectionURI := config.GetMongoConfig().URI
+var (
+	mgOnce sync.Once
+	_mongo *Mongo
+)
 
-	// defer cancel()
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(connectionURI))
-	if err != nil {
-		return nil, err
-	}
+func GetMongo(ctx context.Context) *Mongo {
+	mgOnce.Do(func() {
+		connectionURI := config.GetMongoConfig().URI
 
-	db := client.Database(config.GetMongoConfig().DATABASE)
+		opts := options.Client().ApplyURI(connectionURI).SetConnectTimeout(connectTimeout)
+		client, err := mongo.Connect(ctx, opts)
+		if err != nil {
+			panic(err)
+		}
 
-	return &Mongo{DB: db, Client: client}, nil
+		db := client.Database(config.GetMongoConfig().DATABASE)
+
+		_mongo = &Mongo{DB: db, Client: client}
+	})
+
+	return _mongo
 }
 
 func Ping() string {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	mongo, err := GetMongo(ctx)
-	if err != nil {
-		logrus.Error(err)
-		return "fail"
-	}
-	err = mongo.Client.Ping(ctx, readpref.Primary())
+	mongo := GetMongo(ctx)
+	err := mongo.Client.Ping(ctx, readpref.Primary())
 	if err != nil {
 		logrus.Error(err)
 		return "fail"

@@ -10,18 +10,16 @@ import (
 	"github.com/pascallin/go-kit-application/config"
 )
 
-var rlock = &sync.Mutex{}
-var redisSingleInstance *redis.Client
+var (
+	ronce               sync.Once
+	redisSingleInstance *redis.Client
+)
 
 func GetRedis() *redis.Client {
-	if redisSingleInstance == nil {
-		rlock.Lock()
-		defer rlock.Unlock()
-		if redisSingleInstance == nil {
-			client := initRedis()
-			redisSingleInstance = client
-		}
-	}
+	ronce.Do(func() {
+		client := initRedis()
+		redisSingleInstance = client
+	})
 	return redisSingleInstance
 }
 

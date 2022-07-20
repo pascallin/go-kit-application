@@ -12,21 +12,19 @@ import (
 	"github.com/pascallin/go-kit-application/config"
 )
 
-var mlock = &sync.Mutex{}
-var mysqlSingleInstance *gorm.DB
+var (
+	mOnce               sync.Once
+	mysqlSingleInstance *gorm.DB
+)
 
 func GetMysqlDB() *gorm.DB {
-	if mysqlSingleInstance == nil {
-		mlock.Lock()
-		defer mlock.Unlock()
-		if mysqlSingleInstance == nil {
-			db, err := openMysql()
-			if err != nil {
-				log.Error(err)
-			}
-			mysqlSingleInstance = db
+	mOnce.Do(func() {
+		db, err := openMysql()
+		if err != nil {
+			log.Error(err)
 		}
-	}
+		mysqlSingleInstance = db
+	})
 	return mysqlSingleInstance
 }
 
