@@ -8,8 +8,10 @@ import (
 	"github.com/pascallin/go-kit-application/config"
 )
 
-var _intsMetrics metrics.Counter
-var _charsMetrics metrics.Counter
+var (
+	_intsMetrics  metrics.Counter
+	_charsMetrics metrics.Counter
+)
 
 func GetServiceMetrics() (ints metrics.Counter, chars metrics.Counter) {
 	if _intsMetrics != nil && _charsMetrics != nil {

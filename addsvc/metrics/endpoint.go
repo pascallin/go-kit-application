@@ -8,7 +8,9 @@ import (
 	"github.com/pascallin/go-kit-application/config"
 )
 
-var _requestDurationMetrics metrics.Histogram
+var (
+	_requestDurationMetrics metrics.Histogram
+)
 
 func GetEndpointMetrics() (duration metrics.Histogram) {
 	if _requestDurationMetrics != nil {
