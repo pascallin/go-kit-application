@@ -4,6 +4,7 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"sync"
 
 	"github.com/go-kit/kit/log"
 	kitlogrus "github.com/go-kit/kit/log/logrus"
@@ -14,6 +15,7 @@ import (
 )
 
 var logger log.Logger
+var _loggerOnce sync.Once
 
 func NewDefaultLogger() {
 	logger = log.NewLogfmtLogger(os.Stderr)
@@ -57,8 +59,8 @@ func NewZapLogger() {
 }
 
 func GetLogger() log.Logger {
-	if logger == nil {
+	_loggerOnce.Do(func() {
 		NewDefaultLogger()
-	}
+	})
 	return logger
 }
