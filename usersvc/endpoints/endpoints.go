@@ -13,11 +13,6 @@ import (
 	"github.com/pascallin/go-kit-application/usersvc/services"
 )
 
-var (
-	zipkinTracer *stdzipkin.Tracer
-	tracer       stdopentracing.Tracer
-)
-
 type EndpointSet struct {
 	RegisterEndpoint       endpoint.Endpoint
 	LoginEndpoint          endpoint.Endpoint

@@ -2,11 +2,11 @@ package conn
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -36,7 +36,7 @@ func GetMongo(ctx context.Context) (*Mongo, error) {
 		opts := options.Client().ApplyURI(connectionURI).SetConnectTimeout(connectTimeout)
 		client, err := mongo.Connect(ctx, opts)
 		if err != nil {
-			fmt.Errorf("init mongo error %v", err)
+			log.Error(err)
 			return
 		}
 

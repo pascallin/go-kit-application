@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/go-redis/redis/v8"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/pascallin/go-kit-application/config"
 )
@@ -19,7 +20,7 @@ func GetRedis() *redis.Client {
 	ronce.Do(func() {
 		client, err := initRedis()
 		if err != nil {
-			fmt.Errorf("init redis error %v", err)
+			log.Error(err)
 			return
 		}
 		redisSingleInstance = client
