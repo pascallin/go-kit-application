@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"os/signal"
 	"syscall"
@@ -18,21 +19,31 @@ import (
 
 func main() {
 	logger := pkg.GetLogger()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
+	if err := run(ctx); err != nil {
+		log.Fatal(err)
+	}
+
+	// Listen for the interrupt signal.
+	<-ctx.Done()
+
+	logger.Log("gateway", "exiting")
+}
+
+func run(ctx context.Context) error {
+	logger := pkg.GetLogger()
 	r := mux.NewRouter()
 
 	tracer := stdopentracing.GlobalTracer() // no-op
 	zipkinTracer, _ := stdzipkin.NewTracer(nil, stdzipkin.WithNoopTracer(true))
 	discoveryClient, err := pkg.NewKitDiscoverClient()
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	ctx := context.Background()
 	svc.RegisterAddsvc(ctx, r, tracer, zipkinTracer, discoveryClient.Client)
-
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 
 	httpAddr := fmt.Sprintf(":%d", config.GetGatewayConfig().HttpPort)
 	// HTTP transport.
@@ -43,8 +54,5 @@ func main() {
 		}
 	}()
 
-	// Listen for the interrupt signal.
-	<-ctx.Done()
-
-	logger.Log("gateway", "exiting")
+	return nil
 }

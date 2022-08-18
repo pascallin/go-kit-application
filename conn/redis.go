@@ -17,18 +17,22 @@ var (
 
 func GetRedis() *redis.Client {
 	ronce.Do(func() {
-		client := initRedis()
+		client, err := initRedis()
+		if err != nil {
+			fmt.Errorf("init redis error %v", err)
+			return
+		}
 		redisSingleInstance = client
 	})
 	return redisSingleInstance
 }
 
-func initRedis() *redis.Client {
+func initRedis() (*redis.Client, error) {
 	c := config.GetRedisConfig()
 
 	db, err := strconv.ParseInt(c.Database, 10, 32)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	rdb := redis.NewClient(&redis.Options{
@@ -38,5 +42,5 @@ func initRedis() *redis.Client {
 		DB:       int(db),
 	})
 
-	return rdb
+	return rdb, nil
 }

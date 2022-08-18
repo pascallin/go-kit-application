@@ -24,7 +24,7 @@ func GrpcServe(logger log.Logger) error {
 
 	zipkinTracer, tracer, err := pkg.InitTracer(c.Name)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	ints, chars := metrics.GetServiceMetrics()
@@ -57,7 +57,7 @@ func HttpServe(logger log.Logger) error {
 
 	zipkinTracer, tracer, err := pkg.InitTracer(c.Name)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	ints, chars := metrics.GetServiceMetrics()

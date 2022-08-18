@@ -22,7 +22,7 @@ func GrpcServe(logger log.Logger) error {
 
 	zipkinTracer, tracer, err := pkg.InitTracer(c.Name)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	var (
@@ -35,7 +35,7 @@ func GrpcServe(logger log.Logger) error {
 	grpcListener, err := net.Listen("tcp", grpcAddr)
 	if err != nil {
 		logger.Log("transport", "gRPC", "during", "Listen", "err", err)
-		panic(err)
+		return err
 	}
 
 	logger.Log("transport", "gRPC", "addr", c.GrpcPort)

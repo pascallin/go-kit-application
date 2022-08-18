@@ -35,7 +35,7 @@ func NewKitDiscoverClient() (client *KitDiscoverClient, err error) {
 	return c, err
 }
 
-func (c *KitDiscoverClient) Register(name string, instance ServiceInstance, meta map[string]string) bool {
+func (c *KitDiscoverClient) Register(name string, instance ServiceInstance, meta map[string]string) error {
 	serviceRegistration := &consulapi.AgentServiceRegistration{
 		ID:      instance.InstanceId,
 		Name:    name,
@@ -51,11 +51,10 @@ func (c *KitDiscoverClient) Register(name string, instance ServiceInstance, meta
 	err := c.Client.Register(serviceRegistration)
 	if err != nil {
 		log.Println("Register Service Error!")
-		log.Panicln(err)
-		return false
+		return err
 	}
 	log.Println("Register Service Success!")
-	return true
+	return nil
 }
 
 func (c *KitDiscoverClient) Deregister(instanceId string) bool {

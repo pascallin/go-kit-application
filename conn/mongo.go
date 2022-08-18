@@ -2,6 +2,7 @@ package conn
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -28,14 +29,15 @@ var (
 	_mongo *Mongo
 )
 
-func GetMongo(ctx context.Context) *Mongo {
+func GetMongo(ctx context.Context) (*Mongo, error) {
 	mgOnce.Do(func() {
 		connectionURI := config.GetMongoConfig().URI
 
 		opts := options.Client().ApplyURI(connectionURI).SetConnectTimeout(connectTimeout)
 		client, err := mongo.Connect(ctx, opts)
 		if err != nil {
-			panic(err)
+			fmt.Errorf("init mongo error %v", err)
+			return
 		}
 
 		db := client.Database(config.GetMongoConfig().DATABASE)
@@ -43,14 +45,18 @@ func GetMongo(ctx context.Context) *Mongo {
 		_mongo = &Mongo{DB: db, Client: client}
 	})
 
-	return _mongo
+	return _mongo, nil
 }
 
 func Ping() string {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	mongo := GetMongo(ctx)
-	err := mongo.Client.Ping(ctx, readpref.Primary())
+	mongo, err := GetMongo(ctx)
+	if err != nil {
+		logrus.Error(err)
+		return "fail"
+	}
+	err = mongo.Client.Ping(ctx, readpref.Primary())
 	if err != nil {
 		logrus.Error(err)
 		return "fail"

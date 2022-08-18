@@ -48,7 +48,10 @@ type User struct {
 
 func (s userService) findUserByUserName(ctx context.Context, username string) (err error, user *User) {
 	user = &User{}
-	c := conn.GetMongo(ctx)
+	c, err := conn.GetMongo(ctx)
+	if err != nil {
+		return err, nil
+	}
 	err = c.DB.Collection("users").FindOne(ctx, bson.M{"username": username}).Decode(user)
 	if err != nil {
 		return err, nil
@@ -77,7 +80,10 @@ func (s userService) Login(ctx context.Context, username string, password string
 }
 
 func (s userService) Register(ctx context.Context, username, password, nickname string) (err error, id primitive.ObjectID) {
-	c := conn.GetMongo(ctx)
+	c, err := conn.GetMongo(ctx)
+	if err != nil {
+		return err, primitive.NilObjectID
+	}
 
 	_, existUser := s.findUserByUserName(ctx, username)
 	if existUser != nil {
@@ -98,7 +104,10 @@ func (s userService) Register(ctx context.Context, username, password, nickname 
 }
 
 func (s userService) UpdatePassword(ctx context.Context, username, password, newPassword string) (err error) {
-	c := conn.GetMongo(ctx)
+	c, err := conn.GetMongo(ctx)
+	if err != nil {
+		return err
+	}
 
 	var user User
 	p := md5.Sum([]byte(password))

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"os/signal"
 	"syscall"
 
@@ -12,15 +13,28 @@ import (
 
 func main() {
 	logger := pkg.GetLogger()
-	c := config.GetAddSvcConfig()
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+
+	// Listen for the interrupt signal.
+	<-ctx.Done()
+
+	logger.Log("service", "exiting")
+}
+
+func run() error {
+	logger := pkg.GetLogger()
+	c := config.GetAddSvcConfig()
+
 	if c.IsNeedDiscovery {
 		client, err := pkg.NewKitDiscoverClient()
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 		status := client.Register(c.Name, pkg.ServiceInstance{
 			InstanceId:   c.HostName,
@@ -49,8 +63,5 @@ func main() {
 		}
 	}()
 
-	// Listen for the interrupt signal.
-	<-ctx.Done()
-
-	logger.Log("service", "exiting")
+	return nil
 }
