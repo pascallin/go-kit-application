@@ -68,7 +68,7 @@ type RegisterResponse struct {
 func makeRegisterEndpoint(s services.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(RegisterRequest)
-		err, id := s.Register(ctx, req.Username, req.Password, req.Nickname)
+		id, err := s.Register(ctx, req.Username, req.Password, req.Nickname)
 		return RegisterResponse{Id: id.String(), Err: err}, nil
 	}
 }
@@ -85,7 +85,7 @@ type LoginResponse struct {
 func makeLoginEndpoint(s services.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(LoginRequest)
-		err, token := s.Login(ctx, req.Username, req.Password)
+		token, err := s.Login(ctx, req.Username, req.Password)
 		return LoginResponse{Token: token, Err: err}, nil
 	}
 }

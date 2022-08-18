@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/go-kit/kit/log"
+	"github.com/go-kit/log"
 	"github.com/golang-jwt/jwt/v4"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -19,8 +19,8 @@ import (
 
 // Service describes a service that adds things together.
 type Service interface {
-	Register(ctx context.Context, username, password, nickname string) (error, primitive.ObjectID)
-	Login(ctx context.Context, username string, password string) (err error, token string)
+	Register(ctx context.Context, username, password, nickname string) (primitive.ObjectID, error)
+	Login(ctx context.Context, username string, password string) (token string, err error)
 	UpdatePassword(ctx context.Context, username, password, newPassword string) error
 }
 
@@ -46,27 +46,27 @@ type User struct {
 	Password string `bson:"password" json:"password"`
 }
 
-func (s userService) findUserByUserName(ctx context.Context, username string) (err error, user *User) {
+func (s userService) findUserByUserName(ctx context.Context, username string) (user *User, err error) {
 	user = &User{}
 	c, err := conn.GetMongo(ctx)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 	err = c.DB.Collection("users").FindOne(ctx, bson.M{"username": username}).Decode(user)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
-	return nil, user
+	return user, nil
 }
 
-func (s userService) Login(ctx context.Context, username string, password string) (err error, token string) {
-	err, user := s.findUserByUserName(ctx, username)
+func (s userService) Login(ctx context.Context, username string, password string) (token string, err error) {
+	user, err := s.findUserByUserName(ctx, username)
 	if err != nil {
-		return err, ""
+		return "", err
 	}
 	p := md5.Sum([]byte(password))
 	if user.Password != fmt.Sprintf("%x", p) {
-		return errors.New("wrong password"), ""
+		return "", errors.New("wrong password")
 	}
 	gentoken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"username": user.Username,
@@ -74,20 +74,20 @@ func (s userService) Login(ctx context.Context, username string, password string
 	})
 	tokenString, err := gentoken.SignedString([]byte(os.Getenv("JWT_SECRET")))
 	if err != nil {
-		return errors.New("generate token error: " + err.Error()), ""
+		return "", errors.New("generate token error: " + err.Error())
 	}
-	return nil, tokenString
+	return tokenString, nil
 }
 
-func (s userService) Register(ctx context.Context, username, password, nickname string) (err error, id primitive.ObjectID) {
+func (s userService) Register(ctx context.Context, username, password, nickname string) (id primitive.ObjectID, err error) {
 	c, err := conn.GetMongo(ctx)
 	if err != nil {
-		return err, primitive.NilObjectID
+		return primitive.NilObjectID, err
 	}
 
 	_, existUser := s.findUserByUserName(ctx, username)
 	if existUser != nil {
-		return errors.New("username existed"), primitive.NilObjectID
+		return primitive.NilObjectID, errors.New("username existed")
 	}
 	p := md5.Sum([]byte(password))
 	insertResult, err := c.DB.Collection("users").InsertOne(ctx, User{
@@ -96,11 +96,11 @@ func (s userService) Register(ctx context.Context, username, password, nickname 
 		fmt.Sprintf("%x", p),
 	})
 	if err != nil {
-		return err, primitive.NilObjectID
+		return primitive.NilObjectID, err
 	}
 
 	id = insertResult.InsertedID.(primitive.ObjectID)
-	return nil, id
+	return id, nil
 }
 
 func (s userService) UpdatePassword(ctx context.Context, username, password, newPassword string) (err error) {
