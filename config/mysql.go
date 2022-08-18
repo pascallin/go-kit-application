@@ -1,30 +1,23 @@
 package config
 
 import (
-	"os"
+	"fmt"
 
-	"github.com/joho/godotenv"
+	"github.com/caarlos0/env/v6"
 )
 
-func init() {
-	// load .env
-	godotenv.Load()
+type MysqlConfig struct {
+	Host     string `env:"MYSQL_HOST"`
+	Port     string `env:"MYSQL_PORT"`
+	User     string `env:"MYSQL_USER"`
+	Password string `env:"MYSQL_PASSWORD"`
+	Database string `env:"MYSQL_DATABASE"`
 }
 
-type Mysql struct {
-	Host     string `json:"host,omitempty"`
-	Port     string `json:"port,omitempty"`
-	User     string `json:"user,omitempty"`
-	Password string `json:"password,omitempty"`
-	Database string `json:"database,omitempty"`
-}
-
-func GetMysqlConfig() Mysql {
-	return Mysql{
-		Host:     os.Getenv("MYSQL_HOST"),
-		Port:     os.Getenv("MYSQL_PORT"),
-		User:     os.Getenv("MYSQL_USER"),
-		Password: os.Getenv("MYSQL_PASSWORD"),
-		Database: os.Getenv("MYSQL_DATABASE"),
+func GetMysqlConfig() MysqlConfig {
+	cfg := MysqlConfig{}
+	if err := env.Parse(&cfg); err != nil {
+		fmt.Printf("%+v\n", err)
 	}
+	return cfg
 }

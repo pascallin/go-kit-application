@@ -1,28 +1,22 @@
 package config
 
 import (
-	"os"
+	"fmt"
 
-	"github.com/joho/godotenv"
+	"github.com/caarlos0/env/v6"
 )
 
-func init() {
-	// load .env
-	godotenv.Load()
+type RedisConfig struct {
+	Host     string `env:"REDIS_HOST"`
+	Port     string `env:"REDIS_PORT"`
+	Password string `env:"REDIS_PASSWORD"`
+	Database string `env:"REDIS_DB"`
 }
 
-type Redis struct {
-	Host     string `json:"host,omitempty"`
-	Port     string `json:"port,omitempty"`
-	Password string `json:"password,omitempty"`
-	Database string `json:"database,omitempty"`
-}
-
-func GetRedisConfig() Redis {
-	return Redis{
-		Host:     os.Getenv("REDIS_HOST"),
-		Port:     os.Getenv("REDIS_PORT"),
-		Password: os.Getenv("REDIS_PASSWORD"),
-		Database: os.Getenv("REDIS_DB"),
+func GetRedisConfig() RedisConfig {
+	cfg := RedisConfig{}
+	if err := env.Parse(&cfg); err != nil {
+		fmt.Printf("%+v\n", err)
 	}
+	return cfg
 }

@@ -1,24 +1,20 @@
 package config
 
 import (
-	"os"
+	"fmt"
 
-	"github.com/joho/godotenv"
+	"github.com/caarlos0/env/v6"
 )
 
-func init() {
-	// load .env
-	godotenv.Load()
-}
-
 type MongoConfig struct {
-	URI      string `json:"uri,omitempty"`
-	DATABASE string `json:"database"`
+	URI      string `env:"MONGODB_URI"`
+	DATABASE string `env:"MONGODB_DATABASE"`
 }
 
 func GetMongoConfig() MongoConfig {
-	return MongoConfig{
-		URI:      os.Getenv("MONGODB_URI"),
-		DATABASE: os.Getenv("MONGODB_DATABASE"),
+	cfg := MongoConfig{}
+	if err := env.Parse(&cfg); err != nil {
+		fmt.Printf("%+v\n", err)
 	}
+	return cfg
 }

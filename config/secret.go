@@ -1,22 +1,19 @@
 package config
 
 import (
-	"os"
+	"fmt"
 
-	"github.com/joho/godotenv"
+	"github.com/caarlos0/env/v6"
 )
 
-func init() {
-	// load .env
-	godotenv.Load()
-}
-
 type AppSecret struct {
-	JWT_SECRET string
+	JwtSecret string `env:"JWT_SECRET"`
 }
 
 func GetAppSecretConfig() AppSecret {
-	return AppSecret{
-		JWT_SECRET: os.Getenv("JWT_SECRET"),
+	cfg := AppSecret{}
+	if err := env.Parse(&cfg); err != nil {
+		fmt.Printf("%+v\n", err)
 	}
+	return cfg
 }

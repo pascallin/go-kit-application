@@ -1,24 +1,20 @@
 package config
 
 import (
-	"os"
+	"fmt"
 
-	"github.com/joho/godotenv"
+	"github.com/caarlos0/env/v6"
 )
 
-func init() {
-	// load .env
-	godotenv.Load()
+type InfraConfig struct {
+	ZIPKIN_URL string `env:"ZIPKIN_URL"`
+	CONSUL_URL string `env:"CONSUL_URL"`
 }
 
-type Infra struct {
-	ZIPKIN_URL string `json:"zipkinUrL"`
-	CONSUL_URL string `json:"consulUrl"`
-}
-
-func GetInfraConfig() Infra {
-	return Infra{
-		ZIPKIN_URL: os.Getenv("ZIPKIN_URL"),
-		CONSUL_URL: os.Getenv("CONSUL_URL"),
+func GetInfraConfig() InfraConfig {
+	cfg := InfraConfig{}
+	if err := env.Parse(&cfg); err != nil {
+		fmt.Printf("%+v\n", err)
 	}
+	return cfg
 }

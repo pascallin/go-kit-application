@@ -3,6 +3,7 @@ module github.com/pascallin/go-kit-application
 go 1.17
 
 require (
+	github.com/caarlos0/env/v6 v6.9.3
 	github.com/go-kit/kit v0.12.0
 	github.com/go-kit/log v0.2.0
 	github.com/go-redis/redis/v8 v8.11.5
