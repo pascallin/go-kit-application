@@ -43,7 +43,7 @@ func GrpcServe(logger log.Logger) error {
 
 	pb.RegisterUserServer(server, grpcServer)
 	// heath check register
-	grpc_health_v1.RegisterHealthServer(server, NewHealthChecker())
+	grpc_health_v1.RegisterHealthServer(server, NewGrpHealthChecker())
 
 	return server.Serve(grpcListener)
 }
