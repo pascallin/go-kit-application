@@ -71,6 +71,13 @@ All commands stay in `[service]/cmd` folder.
 go run addsvc/cmd/addsvc.go
 ```
 
+http swagger gen
+
+```shell
+cd usersvc
+swag init --generalInfo ./svc.go
+```
+
 ## TODO list
 
 - Prometheus

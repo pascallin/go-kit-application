@@ -57,5 +57,11 @@ func run() error {
 		}
 	}()
 
+	go func() {
+		if err := usersvc.HttpServe(logger); err != nil {
+			logger.Log(err.Error())
+		}
+	}()
+
 	return nil
 }

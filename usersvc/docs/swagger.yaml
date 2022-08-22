@@ -1,0 +1,49 @@
+definitions:
+  endpoints.RegisterRequest:
+    properties:
+      username:
+        type: string
+    type: object
+  endpoints.RegisterResponse:
+    properties:
+      err:
+        type: string
+      id:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: user service
+  title: user service
+  version: "1.0"
+paths:
+  /user/v1/register:
+    post:
+      consumes:
+      - application/json
+      description: create subscription
+      parameters:
+      - description: data
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/endpoints.RegisterResponse'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/endpoints.RegisterRequest'
+      security:
+      - ServiceApiKey: []
+      summary: user register
+      tags:
+      - user
+securityDefinitions:
+  ServiceApiKey:
+    in: header
+    name: x-api-key
+    type: apiKey
+swagger: "2.0"

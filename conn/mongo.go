@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -53,12 +52,12 @@ func Ping() string {
 	defer cancel()
 	mongo, err := GetMongo(ctx)
 	if err != nil {
-		logrus.Error(err)
+		log.Error(err)
 		return "fail"
 	}
 	err = mongo.Client.Ping(ctx, readpref.Primary())
 	if err != nil {
-		logrus.Error(err)
+		log.Error(err)
 		return "fail"
 	}
 

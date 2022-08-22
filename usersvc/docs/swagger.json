@@ -1,0 +1,78 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "user service",
+        "title": "user service",
+        "contact": {},
+        "version": "1.0"
+    },
+    "paths": {
+        "/user/v1/register": {
+            "post": {
+                "security": [
+                    {
+                        "ServiceApiKey": []
+                    }
+                ],
+                "description": "create subscription",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "user register",
+                "parameters": [
+                    {
+                        "description": "data",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/endpoints.RegisterResponse"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/endpoints.RegisterRequest"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "endpoints.RegisterRequest": {
+            "type": "object",
+            "properties": {
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "endpoints.RegisterResponse": {
+            "type": "object",
+            "properties": {
+                "err": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "ServiceApiKey": {
+            "type": "apiKey",
+            "name": "x-api-key",
+            "in": "header"
+        }
+    }
+}

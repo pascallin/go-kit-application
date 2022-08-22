@@ -85,7 +85,10 @@ func (s userService) Register(ctx context.Context, username, password, nickname 
 		return primitive.NilObjectID, err
 	}
 
-	_, existUser := s.findUserByUserName(ctx, username)
+	existUser, err := s.findUserByUserName(ctx, username)
+	if err != nil {
+		return primitive.NilObjectID, err
+	}
 	if existUser != nil {
 		return primitive.NilObjectID, errors.New("username existed")
 	}

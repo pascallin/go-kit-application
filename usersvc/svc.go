@@ -3,6 +3,7 @@ package usersvc
 import (
 	"fmt"
 	"net"
+	"net/http"
 
 	"github.com/go-kit/kit/log"
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
@@ -46,4 +47,29 @@ func GrpcServe(logger log.Logger) error {
 	grpc_health_v1.RegisterHealthServer(server, NewGrpHealthChecker())
 
 	return server.Serve(grpcListener)
+}
+
+// @title user service
+// @version 1.0
+// @description  user service
+// @securityDefinitions.apikey  ServiceApiKey
+// @in                          header
+// @name                        x-api-key
+func HttpServe(logger log.Logger) error {
+	c := config.GetUserSvcConfig()
+
+	var (
+		service     = services.NewService(logger)
+		httpHandler = transports.MakeHandler(service, logger)
+	)
+
+	// The HTTP listener mounts the Go kit HTTP handler we created.
+	httpListener, err := net.Listen("tcp", fmt.Sprintf(":%d", c.HttpPort))
+	if err != nil {
+		logger.Log("transport", "HTTP", "during", "Listen", "err", err)
+		return err
+	}
+
+	logger.Log("transport", "HTTP", "addr", fmt.Sprintf(":%d", c.HttpPort))
+	return http.Serve(httpListener, httpHandler)
 }

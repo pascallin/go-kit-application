@@ -64,7 +64,7 @@ func decodeGRPCRegisterRequest(_ context.Context, grpcReq interface{}) (interfac
 
 func encodeGRPCRegisterResponse(_ context.Context, response interface{}) (interface{}, error) {
 	res := response.(endpoints.RegisterResponse)
-	return &pb.RegisterResponse{Id: res.Id, Err: err2str(res.Err)}, nil
+	return &pb.RegisterResponse{Id: res.Id, Err: res.Err}, nil
 }
 
 func (s *grpcServer) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {

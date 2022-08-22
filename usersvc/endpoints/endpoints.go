@@ -22,7 +22,7 @@ type EndpointSet struct {
 func New(svc services.Service, logger log.Logger, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer) EndpointSet {
 	var registerEndpoint, loginEndpoint, updatePasswordEndpoint endpoint.Endpoint
 	{
-		registerEndpoint = makeRegisterEndpoint(svc)
+		registerEndpoint = MakeRegisterEndpoint(svc)
 		registerEndpoint = LoggingMiddleware(log.With(logger, "method", "Register"))(registerEndpoint)
 		registerEndpoint = opentracing.TraceServer(otTracer, "Register")(registerEndpoint)
 		if zipkinTracer != nil {
@@ -52,19 +52,22 @@ func New(svc services.Service, logger log.Logger, otTracer stdopentracing.Tracer
 	}
 }
 
+// swagger:parameters RegisterRequest
 type RegisterRequest struct {
 	Username, Password, Nickname string
 }
+
+// swagger:parameters RegisterResponse
 type RegisterResponse struct {
 	Id  string
-	Err error
+	Err string
 }
 
-func makeRegisterEndpoint(s services.Service) endpoint.Endpoint {
+func MakeRegisterEndpoint(s services.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(RegisterRequest)
 		id, err := s.Register(ctx, req.Username, req.Password, req.Nickname)
-		return RegisterResponse{Id: id.String(), Err: err}, nil
+		return RegisterResponse{Id: id.String(), Err: err.Error()}, nil
 	}
 }
 
