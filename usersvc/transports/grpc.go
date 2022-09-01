@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/transport"
 	"github.com/go-kit/kit/transport/grpc"
+	"github.com/go-kit/log"
 
 	pb "github.com/pascallin/go-kit-application/pb/usersvc"
 	"github.com/pascallin/go-kit-application/usersvc/endpoints"
@@ -16,6 +16,7 @@ type grpcServer struct {
 	register       grpc.Handler
 	login          grpc.Handler
 	updatePassword grpc.Handler
+	validToken     grpc.Handler
 	pb.UnimplementedUserServer
 }
 
@@ -40,6 +41,12 @@ func NewGRPCServer(endpoints endpoints.EndpointSet, logger log.Logger) pb.UserSe
 			endpoints.UpdatePasswordEndpoint,
 			decodeGRPCUpdatePasswordRequest,
 			encodeGRPCUpdatePasswordResponse,
+			options...,
+		),
+		validToken: grpc.NewServer(
+			endpoints.ValidTokenEndpoint,
+			decodeGRPCValidTokenRequest,
+			encodeGRPCValidTokenResponse,
 			options...,
 		),
 	}
@@ -105,9 +112,29 @@ func decodeGRPCUpdatePasswordRequest(_ context.Context, grpcReq interface{}) (in
 	}, nil
 }
 
+func (s *grpcServer) ValidToken(ctx context.Context, req *pb.ValidTokenReq) (*pb.ValidTokenRes, error) {
+	_, rep, err := s.validToken.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return rep.(*pb.ValidTokenRes), nil
+}
+
 func encodeGRPCUpdatePasswordResponse(_ context.Context, response interface{}) (interface{}, error) {
 	res := response.(endpoints.UpdatePasswordResponse)
 	return &pb.UpdatePasswordResponse{Err: err2str(res.Err)}, nil
+}
+
+func decodeGRPCValidTokenRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(*pb.ValidTokenReq)
+	return endpoints.ValidTokenEndpointRequest{
+		Token: req.Token,
+	}, nil
+}
+
+func encodeGRPCValidTokenResponse(_ context.Context, response interface{}) (interface{}, error) {
+	res := response.(endpoints.ValidTokenEndpointResponse)
+	return &pb.ValidTokenRes{IsValid: res.IsValid, Err: err2str(res.Err)}, nil
 }
 
 func str2err(s string) error {

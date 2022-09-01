@@ -35,7 +35,7 @@ func GetMongo(ctx context.Context) (*Mongo, error) {
 		opts := options.Client().ApplyURI(connectionURI).SetConnectTimeout(connectTimeout)
 		client, err := mongo.Connect(ctx, opts)
 		if err != nil {
-			log.Error(err)
+			log.Error("GetMongo err", err)
 			return
 		}
 

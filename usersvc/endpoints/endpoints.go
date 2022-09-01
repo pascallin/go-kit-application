@@ -17,10 +17,11 @@ type EndpointSet struct {
 	RegisterEndpoint       endpoint.Endpoint
 	LoginEndpoint          endpoint.Endpoint
 	UpdatePasswordEndpoint endpoint.Endpoint
+	ValidTokenEndpoint     endpoint.Endpoint
 }
 
 func New(svc services.Service, logger log.Logger, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer) EndpointSet {
-	var registerEndpoint, loginEndpoint, updatePasswordEndpoint endpoint.Endpoint
+	var registerEndpoint, loginEndpoint, updatePasswordEndpoint, validEndpoint endpoint.Endpoint
 	{
 		registerEndpoint = MakeRegisterEndpoint(svc)
 		registerEndpoint = LoggingMiddleware(log.With(logger, "method", "Register"))(registerEndpoint)
@@ -45,10 +46,19 @@ func New(svc services.Service, logger log.Logger, otTracer stdopentracing.Tracer
 			updatePasswordEndpoint = zipkin.TraceEndpoint(zipkinTracer, "UpdatePassword")(updatePasswordEndpoint)
 		}
 	}
+	{
+		validEndpoint = makeValidTokenEndpoint(svc)
+		validEndpoint = LoggingMiddleware(log.With(logger, "method", "valid token"))(validEndpoint)
+		validEndpoint = opentracing.TraceServer(otTracer, "AuthTokenValid")(validEndpoint)
+		if zipkinTracer != nil {
+			validEndpoint = zipkin.TraceEndpoint(zipkinTracer, "AuthTokenValid")(validEndpoint)
+		}
+	}
 	return EndpointSet{
 		RegisterEndpoint:       registerEndpoint,
 		LoginEndpoint:          loginEndpoint,
 		UpdatePasswordEndpoint: updatePasswordEndpoint,
+		ValidTokenEndpoint:     validEndpoint,
 	}
 }
 
@@ -66,8 +76,11 @@ type RegisterResponse struct {
 func MakeRegisterEndpoint(s services.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(RegisterRequest)
-		id, err := s.Register(ctx, req.Username, req.Password, req.Nickname)
-		return RegisterResponse{Id: id.String(), Err: err.Error()}, nil
+		id, err := s.UserService.Register(ctx, req.Username, req.Password, req.Nickname)
+		if err != nil {
+			return RegisterResponse{Id: "", Err: err.Error()}, nil
+		}
+		return RegisterResponse{Id: id.String(), Err: ""}, nil
 	}
 }
 
@@ -83,7 +96,7 @@ type LoginResponse struct {
 func makeLoginEndpoint(s services.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(LoginRequest)
-		token, err := s.Login(ctx, req.Username, req.Password)
+		token, err := s.UserService.Login(ctx, req.Username, req.Password)
 		return LoginResponse{Token: token, Err: err}, nil
 	}
 }
@@ -99,7 +112,24 @@ type UpdatePasswordResponse struct {
 func makeUpdatePasswordEndpoint(s services.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(UpdatePasswordRequest)
-		err = s.UpdatePassword(ctx, req.Username, req.Password, req.NewPassword)
+		err = s.UserService.UpdatePassword(ctx, req.Username, req.Password, req.NewPassword)
 		return UpdatePasswordResponse{Err: err}, nil
+	}
+}
+
+type ValidTokenEndpointRequest struct {
+	Token string
+}
+
+type ValidTokenEndpointResponse struct {
+	IsValid bool
+	Err     error
+}
+
+func makeValidTokenEndpoint(s services.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(ValidTokenEndpointRequest)
+		isValid, err := s.AuthService.Valid(ctx, req.Token)
+		return ValidTokenEndpointResponse{Err: err, IsValid: isValid}, nil
 	}
 }

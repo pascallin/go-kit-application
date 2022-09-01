@@ -32,11 +32,12 @@ func GrpcServe(logger log.Logger) error {
 		return err
 	}
 
-	var (
-		service    = services.NewService(db.DB, logger)
-		endpoints  = endpoints.New(service, logger, tracer, zipkinTracer)
-		grpcServer = transports.NewGRPCServer(endpoints, logger)
-	)
+	service, err := services.InitializeService(db.DB, logger)
+	if err != nil {
+		return err
+	}
+	endpoints := endpoints.New(service, logger, tracer, zipkinTracer)
+	grpcServer := transports.NewGRPCServer(endpoints, logger)
 
 	grpcAddr := fmt.Sprintf(":%d", c.GrpcPort)
 	grpcListener, err := net.Listen("tcp", grpcAddr)
@@ -68,10 +69,11 @@ func HttpServe(logger log.Logger) error {
 		return err
 	}
 
-	var (
-		service     = services.NewService(db.DB, logger)
-		httpHandler = transports.MakeHandler(service, logger)
-	)
+	service, err := services.InitializeService(db.DB, logger)
+	if err != nil {
+		return err
+	}
+	httpHandler := transports.MakeHandler(service, logger)
 
 	// The HTTP listener mounts the Go kit HTTP handler we created.
 	httpListener, err := net.Listen("tcp", fmt.Sprintf(":%d", c.HttpPort))

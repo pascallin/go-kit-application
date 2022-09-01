@@ -8,6 +8,7 @@ require (
 	github.com/go-kit/log v0.2.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v4 v4.3.0
+	github.com/google/wire v0.5.0
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/consul/api v1.12.0
 	github.com/joho/godotenv v1.3.0

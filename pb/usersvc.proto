@@ -7,6 +7,7 @@ service User {
     rpc Register (RegisterRequest) returns (RegisterResponse) {}
     rpc Login (LoginRequest) returns (LoginResponse) {}
     rpc UpdatePassword (UpdatePasswordRequest) returns (UpdatePasswordResponse) {}
+    rpc ValidToken (ValidTokenReq) returns (ValidTokenRes) {}
 }
 
 message RegisterRequest {
@@ -38,4 +39,13 @@ message UpdatePasswordRequest {
 
 message UpdatePasswordResponse {
     string err = 1;
+}
+
+message ValidTokenReq {
+    string token = 1;
+}
+
+message ValidTokenRes {
+    bool isValid = 1;
+    string err = 2; 
 }

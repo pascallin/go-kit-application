@@ -25,6 +25,7 @@ type UserClient interface {
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	UpdatePassword(ctx context.Context, in *UpdatePasswordRequest, opts ...grpc.CallOption) (*UpdatePasswordResponse, error)
+	ValidToken(ctx context.Context, in *ValidTokenReq, opts ...grpc.CallOption) (*ValidTokenRes, error)
 }
 
 type userClient struct {
@@ -62,6 +63,15 @@ func (c *userClient) UpdatePassword(ctx context.Context, in *UpdatePasswordReque
 	return out, nil
 }
 
+func (c *userClient) ValidToken(ctx context.Context, in *ValidTokenReq, opts ...grpc.CallOption) (*ValidTokenRes, error) {
+	out := new(ValidTokenRes)
+	err := c.cc.Invoke(ctx, "/pb.User/ValidToken", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServer is the server API for User service.
 // All implementations must embed UnimplementedUserServer
 // for forward compatibility
@@ -69,6 +79,7 @@ type UserServer interface {
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	UpdatePassword(context.Context, *UpdatePasswordRequest) (*UpdatePasswordResponse, error)
+	ValidToken(context.Context, *ValidTokenReq) (*ValidTokenRes, error)
 	mustEmbedUnimplementedUserServer()
 }
 
@@ -84,6 +95,9 @@ func (UnimplementedUserServer) Login(context.Context, *LoginRequest) (*LoginResp
 }
 func (UnimplementedUserServer) UpdatePassword(context.Context, *UpdatePasswordRequest) (*UpdatePasswordResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdatePassword not implemented")
+}
+func (UnimplementedUserServer) ValidToken(context.Context, *ValidTokenReq) (*ValidTokenRes, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidToken not implemented")
 }
 func (UnimplementedUserServer) mustEmbedUnimplementedUserServer() {}
 
@@ -152,6 +166,24 @@ func _User_UpdatePassword_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _User_ValidToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidTokenReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServer).ValidToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/pb.User/ValidToken",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServer).ValidToken(ctx, req.(*ValidTokenReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // User_ServiceDesc is the grpc.ServiceDesc for User service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -170,6 +202,10 @@ var User_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdatePassword",
 			Handler:    _User_UpdatePassword_Handler,
+		},
+		{
+			MethodName: "ValidToken",
+			Handler:    _User_ValidToken_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
