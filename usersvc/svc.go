@@ -1,6 +1,7 @@
 package usersvc
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 
 	"github.com/pascallin/go-kit-application/config"
+	"github.com/pascallin/go-kit-application/conn"
 	pb "github.com/pascallin/go-kit-application/pb/usersvc"
 	"github.com/pascallin/go-kit-application/pkg"
 	"github.com/pascallin/go-kit-application/usersvc/endpoints"
@@ -20,6 +22,10 @@ import (
 
 func GrpcServe(logger log.Logger) error {
 	c := config.GetUserSvcConfig()
+	db, err := conn.GetMongo(context.Background())
+	if err != nil {
+		return err
+	}
 
 	zipkinTracer, tracer, err := pkg.InitTracer(c.Name)
 	if err != nil {
@@ -27,7 +33,7 @@ func GrpcServe(logger log.Logger) error {
 	}
 
 	var (
-		service    = services.NewService(logger)
+		service    = services.NewService(db.DB, logger)
 		endpoints  = endpoints.New(service, logger, tracer, zipkinTracer)
 		grpcServer = transports.NewGRPCServer(endpoints, logger)
 	)
@@ -57,9 +63,13 @@ func GrpcServe(logger log.Logger) error {
 // @name                        x-api-key
 func HttpServe(logger log.Logger) error {
 	c := config.GetUserSvcConfig()
+	db, err := conn.GetMongo(context.Background())
+	if err != nil {
+		return err
+	}
 
 	var (
-		service     = services.NewService(logger)
+		service     = services.NewService(db.DB, logger)
 		httpHandler = transports.MakeHandler(service, logger)
 	)
 
