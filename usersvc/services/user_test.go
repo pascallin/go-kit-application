@@ -12,7 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/integration/mtest"
 )
 
-func TestUserServiceLogin(t *testing.T) {
+func TestUserService(t *testing.T) {
 	logger := log.NewLogfmtLogger(os.Stderr)
 
 	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
@@ -96,4 +96,55 @@ func TestUserServiceLogin(t *testing.T) {
 			t.Fatalf("expected ErrExistedUsername")
 		}
 	})
+
+	mt.Run("update password succeed", func(mt *mtest.T) {
+		db := mt.DB
+		svc := NewUserService(db, logger)
+
+		docs := bson.D{
+			{Key: "_id", Value: "123"},
+			{Key: "username", Value: "pascal"},
+			{Key: "password", Value: "3858f62230ac3c915f300c664312c63f"},
+			{Key: "Nickname", Value: "lin"},
+		}
+		find := mtest.CreateCursorResponse(1, fmt.Sprintf("%s.users", mt.DB.Name()), mtest.FirstBatch, docs)
+		killCursors := mtest.CreateCursorResponse(
+			0,
+			fmt.Sprintf("%s.users", mt.DB.Name()),
+			mtest.NextBatch)
+		mt.AddMockResponses(
+			find,
+			killCursors,
+		)
+		mt.AddMockResponses(mtest.CreateSuccessResponse(bson.D{
+			{Key: "ok", Value: 1},
+			{Key: "value", Value: docs},
+		}...))
+
+		err := svc.UpdatePassword(context.Background(), "pascal", "foobar", "foo")
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	mt.Run("update password with wrong password", func(mt *mtest.T) {
+		db := mt.DB
+		svc := NewUserService(db, logger)
+
+		find := mtest.CreateCursorResponse(1, fmt.Sprintf("%s.users", mt.DB.Name()), mtest.FirstBatch)
+		killCursors := mtest.CreateCursorResponse(
+			0,
+			fmt.Sprintf("%s.users", mt.DB.Name()),
+			mtest.NextBatch)
+		mt.AddMockResponses(
+			find,
+			killCursors,
+		)
+
+		err := svc.UpdatePassword(context.Background(), "pascal", "fake", "foo")
+		if err == nil && !errors.Is(err, ErrWrongUsernameOrPassword) {
+			t.Fatalf("expected ErrWrongUsernameOrPassword")
+		}
+	})
+
 }

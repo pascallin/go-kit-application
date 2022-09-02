@@ -18,8 +18,10 @@ import (
 )
 
 var (
-	ErrWrongPassword   = errors.New("wrong password")
-	ErrExistedUsername = errors.New("username existed")
+	ErrWrongPassword           = errors.New("wrong password")
+	ErrExistedUsername         = errors.New("username existed")
+	ErrWrongUsernameOrPassword = errors.New("username or password not match")
+	ErrUpdatePasswordFailed    = errors.New("update password fail")
 )
 
 type IUserService interface {
@@ -49,8 +51,6 @@ type User struct {
 func (s UserService) findUserByUserName(ctx context.Context, username string) (user *User, err error) {
 	user = &User{}
 
-	s.logger.Log("db", s.db)
-
 	err = s.db.Collection("users").FindOne(ctx, bson.M{"username": username}).Decode(user)
 	if err != nil {
 		// ErrNoDocuments means that the filter did not match any documents in the collection, skip this error in this method
@@ -77,7 +77,13 @@ func (s UserService) Login(ctx context.Context, username string, password string
 	claims := model.CustomerClaims{
 		Username: user.Username,
 		StandardClaims: jwt.StandardClaims{
+			Audience:  "",
 			ExpiresAt: time.Now().Add(3600 * time.Second).Unix(),
+			Id:        "",
+			IssuedAt:  0,
+			Issuer:    "",
+			NotBefore: 0,
+			Subject:   "",
 		},
 	}
 	gentoken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -90,7 +96,7 @@ func (s UserService) Login(ctx context.Context, username string, password string
 
 func (s UserService) Register(ctx context.Context, username, password, nickname string) (id primitive.ObjectID, err error) {
 	existUser, err := s.findUserByUserName(ctx, username)
-	s.logger.Log("err", err, "existUser", existUser)
+
 	if err != nil {
 		return primitive.NilObjectID, err
 	}
@@ -115,13 +121,16 @@ func (s UserService) Register(ctx context.Context, username, password, nickname 
 func (s UserService) UpdatePassword(ctx context.Context, username, password, newPassword string) (err error) {
 	var user User
 	p := md5.Sum([]byte(password))
-	matchUser := s.db.Collection("users").
+	err = s.db.Collection("users").
 		FindOne(ctx, bson.M{
 			"username": username,
 			"password": fmt.Sprintf("%x", p),
-		})
-	if matchUser == nil {
-		return errors.New("username and old password not match")
+		}).Err()
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return ErrWrongUsernameOrPassword
+		}
+		return ErrUpdatePasswordFailed
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()

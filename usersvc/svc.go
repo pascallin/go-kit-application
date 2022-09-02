@@ -8,6 +8,8 @@ import (
 
 	"github.com/go-kit/kit/log"
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
+	"github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
 
@@ -47,7 +49,12 @@ func GrpcServe(logger log.Logger) error {
 	}
 
 	logger.Log("transport", "gRPC", "addr", c.GrpcPort)
-	server := grpc.NewServer(grpc.UnaryInterceptor(kitgrpc.Interceptor))
+	server := grpc.NewServer(
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			kitgrpc.Interceptor,
+			grpc_recovery.UnaryServerInterceptor(),
+		)),
+	)
 
 	pb.RegisterUserServer(server, grpcServer)
 	// heath check register

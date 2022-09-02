@@ -10,6 +10,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.3.0
 	github.com/google/wire v0.5.0
 	github.com/gorilla/mux v1.8.0
+	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/hashicorp/consul/api v1.12.0
 	github.com/joho/godotenv v1.3.0
 	github.com/opentracing/opentracing-go v1.2.0

@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	ErrSignMethod   = errors.New("Unexpected signing method")
-	ErrInvalidToken = errors.New("Invalid token")
+	ErrSignMethod   = errors.New("unexpected signing method")
+	ErrInvalidToken = errors.New("invalid token")
 )
 
 type IAuthService interface {
